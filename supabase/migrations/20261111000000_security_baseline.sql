@@ -63,8 +63,9 @@ create table app.audit_log (
 create index audit_log_entity_idx on app.audit_log (entity, entity_id);
 create index audit_log_occurred_at_idx on app.audit_log (occurred_at desc);
 
+-- Not FORCEd: the owner (postgres, also used by the services until the least-privilege users
+-- exist) must be able to insert. Append-only is guaranteed by the trigger below anyway.
 alter table app.audit_log enable row level security;
-alter table app.audit_log force row level security;
 
 revoke all on app.audit_log from app_api, app_engine;
 grant select, insert on app.audit_log to app_api, app_engine;
