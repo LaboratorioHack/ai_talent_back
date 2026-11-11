@@ -131,8 +131,16 @@ jobs:
           script: |
             set -e
             cd "${{ env.DEPLOY_PATH }}"
+            if [ ! -f .env ]; then echo "ERROR: $PWD/.env not found (see .env.example)"; exit 1; fi
+            # The job token expires with the job; never leave it stored on the server.
+            trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-            if [ -n "$(echo $SERVICES | xargs)" ]; then docker compose pull $SERVICES; fi
-            docker compose up -d --remove-orphans $SERVICES caddy
+            SERVICES="$(echo $SERVICES | xargs)"
+            # --no-deps: this repo only touches its own services (it cannot pull the web image).
+            if [ -n "$SERVICES" ]; then
+              docker compose pull $SERVICES
+              docker compose up -d --no-deps $SERVICES
+            fi
+            docker compose up -d --no-deps caddy
             docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile || true
             docker image prune -f
