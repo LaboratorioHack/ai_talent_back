@@ -58,3 +58,28 @@ Para que esto sea seguro: **branch protection en `main`** exigiendo el check `ci
 
 ### EC2 (una vez)
 Docker + compose plugin, `~/ai-talent/.env` (ver `.env.example`), puertos 80/443 abiertos. Caddy emite TLS automáticamente para `DOMAIN`.
+
+## Desarrollo local (API + AI Engine / RAG)
+
+1. Copia y completa [`/.env.example`](.env.example) como **`.env.development`** en la raíz de `ai_talent_back/` (ya está en `.gitignore`).
+2. Requisitos: [.NET 10 SDK](https://dotnet.microsoft.com/download), [uv](https://docs.astral.sh/uv/), acceso a Supabase y keys de Anthropic / OpenRouter.
+
+Levanta **AI Engine** (puerto 8000) y **API .NET** (puerto 5022) en un solo comando:
+
+```bash
+chmod +x scripts/dev-stack.sh   # una vez
+./scripts/dev-stack.sh
+```
+
+| Servicio | URL | Docs (Scalar, solo Development) |
+|---|---|---|
+| AI Engine | http://localhost:8000 | http://localhost:8000/scalar |
+| API .NET | http://localhost:5022 | http://localhost:5022/scalar |
+
+Para probar rutas `/v1/*` del engine en Scalar, configura el header `X-Internal-Api-Key` con el mismo valor que `ENGINE_API_KEY` / `AiEngine__ApiKey`.
+
+Solo el engine (sin API):
+
+```bash
+cd src/ai_engine && uv run uvicorn ai_engine.api.main:app --reload --port 8000
+```

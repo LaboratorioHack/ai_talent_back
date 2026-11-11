@@ -30,6 +30,7 @@ build-backend = "uv_build"
 dev = [
     "httpx>=0.28.1",
     "pytest>=9.2.0",
+    "pytest-asyncio>=0.25.0",
     "ruff>=0.17.4",
 ]
 
@@ -42,3 +43,5 @@ select = ["E", "F", "I", "B", "UP", "SIM", "ASYNC"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
