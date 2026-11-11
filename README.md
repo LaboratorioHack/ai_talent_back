@@ -57,4 +57,4 @@ Para que esto sea seguro: **branch protection en `main`** exigiendo el check `ci
 `EC2_HOST`, `EC2_USER`, `EC2_SSH_KEY`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `SUPABASE_PROJECT_ID`. Environment `production`.
 
 ### EC2 (una vez)
-Docker + compose plugin, `/opt/ai-talent/.env` (ver `.env.example`), puertos 80/443 abiertos. Caddy emite TLS automáticamente para `DOMAIN`.
+Docker + compose plugin, `~/ai-talent/.env` (ver `.env.example`), puertos 80/443 abiertos. Caddy emite TLS automáticamente para `DOMAIN`.

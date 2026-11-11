@@ -1,4 +1,4 @@
-# Production stack on EC2 (/opt/ai-talent). Secrets live in /opt/ai-talent/.env (never in git).
+# Production stack on EC2 (~/ai-talent). Secrets live in ~/ai-talent/.env (never in git).
 # DB = Supabase (managed), so there is no database container here.
 #
 # OWASP A02: containers run as non-root (see Dockerfiles), with no extra Linux capabilities,
