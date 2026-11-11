@@ -41,6 +41,8 @@ services:
     environment:
       ASPNETCORE_URLS: http://+:8080
       SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      INVITES__SIGNINGKEY: ${INVITES__SIGNINGKEY}
       ConnectionStrings__Supabase: ${API_DB_CONNECTION_STRING}
       AiEngine__BaseUrl: http://engine:8000/
       AiEngine__ApiKey: ${ENGINE_API_KEY}

@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Threading.RateLimiting;
 using AiTalent.Api.Endpoints;
 using AiTalent.Api.Extensions;
+using AiTalent.Api.OpenApi;
 using AiTalent.Application;
 using AiTalent.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -61,6 +62,18 @@ builder.Services.AddRateLimiter(options =>
         RateLimitPartition.GetFixedWindowLimiter(
             context.User.FindFirstValue("sub") ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new FixedWindowRateLimiterOptions { PermitLimit = 100, Window = TimeSpan.FromMinutes(1) }));
+
+    // Invite codes are the only secret a user can try to guess, so joining gets a strict limit.
+    options.AddPolicy<string>(RateLimitPolicies.InviteJoin, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.User.FindFirstValue("sub") ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(15) }));
+
+    // Sign-up creates accounts and sends email, so it is limited per IP address.
+    options.AddPolicy<string>(RateLimitPolicies.SignUp, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(15) }));
 });
 
 // Behind Caddy: trust X-Forwarded-* so rate limiting sees the real client IP.
@@ -74,7 +87,11 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 // OWASP A10 (Mishandling of Exceptional Conditions): RFC 7807 responses, no stack traces leaked.
 builder.Services.AddProblemDetails();
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer<BearerSecurityDocumentTransformer>();
+    options.AddOperationTransformer<BearerSecurityOperationTransformer>();
+});
 
 // No CORS policy on purpose: the web app calls the API through the same origin (Caddy /api).
 
@@ -84,6 +101,7 @@ app.UseForwardedHeaders();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
+// Docs are only served in Development, so production never exposes the API surface.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi().AllowAnonymous();
@@ -95,6 +113,9 @@ app.UseAuthorization();
 app.UseRateLimiter();
 
 app.MapHealthEndpoints();
+app.MapAuthEndpoints();
+app.MapCompanyEndpoints();
+app.MapStaffEndpoints();
 
 await app.RunAsync();
 

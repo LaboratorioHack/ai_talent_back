@@ -44,6 +44,59 @@ Los datos viven en el esquema privado `app` (no expuesto por la Data API); el fr
 ## Seguridad
 Ver [SECURITY.md](SECURITY.md): mapeo OWASP Top 10:2025 + OWASP LLM Top 10 y checklist de despliegue.
 
+## Autenticación y onboarding de empresas
+
+El inicio de sesión lo maneja **Supabase Auth**. La API solo verifica el token que emite Supabase (firma, emisor, audiencia y expiración) y decide qué puede hacer cada usuario según su empresa y rol.
+
+### Endpoints
+
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| POST | `/api/auth/signup` | Público (10 intentos / 15 min por IP) | Crea la cuenta y envía el correo de confirmación. Responde 202 igual para correos nuevos y existentes. |
+| GET | `/api/auth/me` | Usuario autenticado | Devuelve el usuario, si completó MFA y su empresa y rol (`null` si aún no tiene empresa). |
+| POST | `/api/companies` | Sin empresa aún | Crea la empresa y hace admin al usuario. Body: `{ companyName, yourName }`. |
+| POST | `/api/companies/current/invite-codes` | Admin con MFA | Genera un código de invitación válido 7 días. |
+| POST | `/api/companies/join` | Sin empresa aún (10 intentos / 15 min) | Entra a la empresa con un código, como recruiter. Body: `{ code, yourName }`. |
+| GET | `/api/staff` | Admin con MFA | Lista el personal de la empresa. |
+| PATCH | `/api/staff/{userId}` | Admin con MFA | Cambia rol o activa/desactiva. Un admin no puede cambiar a otro admin ni a sí mismo. |
+
+Documentación interactiva: `http://localhost:5022/scalar/v1` (solo en Development).
+
+### Flujo: alta de una empresa nueva
+
+1. La persona se registra con `POST /api/auth/signup` (correo y contraseña).
+2. Confirma el correo desde el enlace que recibe.
+3. Inicia sesión en Supabase y obtiene un token.
+4. `GET /api/auth/me` devuelve `company: null`, así que la app pide crear o unirse a una empresa.
+5. `POST /api/companies` la crea y la persona queda como **admin**.
+6. Para usar acciones de admin, debe activar MFA (TOTP) en Supabase. Sin MFA, la API responde 403.
+
+### Flujo: sumar personal con código de invitación
+
+1. El admin, con MFA, pide un código: `POST /api/companies/current/invite-codes`.
+2. Comparte el código con la persona (la app no lo envía).
+3. La persona se registra, confirma su correo y hace login.
+4. `POST /api/companies/join` con `{ code, yourName }` la añade como **recruiter**.
+5. Si hace falta un admin nuevo, otro admin lo promueve con `PATCH /api/staff/{userId}`.
+
+### Reglas del código de invitación
+
+- Firmado con HMAC y la clave `INVITES__SIGNINGKEY`. Expira a los 7 días.
+- Cualquiera que tenga el código puede usarlo hasta que expire. No se puede revocar uno solo.
+- Un código alterado, vencido o inexistente responde siempre el mismo 400.
+- Quien ya pertenece a una empresa no puede unirse a otra (409).
+- Si entra la persona equivocada, un admin la desactiva con `PATCH` y pierde acceso de inmediato.
+
+### Configuración necesaria
+
+| Variable | Dónde | Notas |
+|---|---|---|
+| `SUPABASE_URL` | API | URL del proyecto Supabase |
+| `SUPABASE_ANON_KEY` | API | Clave pública. Nunca la service role. |
+| `INVITES__SIGNINGKEY` | API | Mínimo 32 caracteres. Generar con `openssl rand -base64 48`. |
+
+La API no arranca si falta alguna de estas variables.
+
 ## CI/CD (sin redundancia)
 
 | Evento | Workflow | Hace | No hace |
