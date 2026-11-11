@@ -1,0 +1,68 @@
+# Production stack on EC2 (/opt/ai-talent). Secrets live in /opt/ai-talent/.env (never in git).
+# DB = Supabase (managed), so there is no database container here.
+#
+# OWASP A02: containers run as non-root (see Dockerfiles), with no extra Linux capabilities,
+# no privilege escalation and read-only root filesystems. Only Caddy publishes ports.
+
+x-hardening: &hardening
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  tmpfs: ["/tmp"]
+
+services:
+  caddy:
+    image: caddy:2.8
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN}
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: ["no-new-privileges:true"]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [web, api]
+
+  web:
+    <<: *hardening
+    image: ghcr.io/laboratoriohack/ai-talent-web:latest
+    tmpfs: ["/tmp", "/app/.next/cache:uid=1000,gid=1000"]   # Next.js cache needs a writable dir
+    expose: ["3000"]
+
+  api:
+    <<: *hardening
+    image: ghcr.io/laboratoriohack/ai-talent-api:latest
+    # Each service only receives the secrets it needs (least privilege).
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      SUPABASE_URL: ${SUPABASE_URL}
+      ConnectionStrings__Supabase: ${API_DB_CONNECTION_STRING}
+      AiEngine__BaseUrl: http://engine:8000/
+      AiEngine__ApiKey: ${ENGINE_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL}
+    expose: ["8080"]
+    depends_on: [engine]
+
+  engine:
+    <<: *hardening
+    image: ghcr.io/laboratoriohack/ai-talent-engine:latest
+    environment:
+      ENVIRONMENT: production
+      ENGINE_API_KEY: ${ENGINE_API_KEY}
+      DATABASE_URL: ${ENGINE_DATABASE_URL}
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL}
+      EMBEDDINGS_PROVIDER: ${EMBEDDINGS_PROVIDER}
+      VOYAGE_API_KEY: ${VOYAGE_API_KEY}
+    expose: ["8000"]   # internal only: reachable from api, not from internet
+
+volumes:
+  caddy_data:
+  caddy_config:

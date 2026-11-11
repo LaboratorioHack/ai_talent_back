@@ -1,0 +1,25 @@
+# OWASP A03 (Software Supply Chain): automated, grouped dependency updates.
+# Dependabot PRs go through the same CI gate as any other PR.
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /src/api
+    schedule: { interval: weekly }
+    groups:
+      nuget: { patterns: ["*"] }
+
+  - package-ecosystem: uv
+    directory: /src/ai_engine
+    schedule: { interval: weekly }
+    groups:
+      python: { patterns: ["*"] }
+
+  - package-ecosystem: docker
+    directories: [/src/api, /src/ai_engine]
+    schedule: { interval: weekly }
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+    groups:
+      actions: { patterns: ["*"] }

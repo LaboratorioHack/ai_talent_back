@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AiTalent.Api/AiTalent.Api.csproj" />
+    <Project Path="src/AiTalent.Application/AiTalent.Application.csproj" />
+    <Project Path="src/AiTalent.Domain/AiTalent.Domain.csproj" />
+    <Project Path="src/AiTalent.Infrastructure/AiTalent.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AiTalent.ArchitectureTests/AiTalent.ArchitectureTests.csproj" />
+    <Project Path="tests/AiTalent.IntegrationTests/AiTalent.IntegrationTests.csproj" />
+    <Project Path="tests/AiTalent.UnitTests/AiTalent.UnitTests.csproj" />
+  </Folder>
+</Solution>

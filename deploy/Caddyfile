@@ -1,0 +1,25 @@
+{$DOMAIN} {
+	encode zstd gzip
+
+	# OWASP A02/A04: headers common to every response, set once at the edge.
+	# CSP and Permissions-Policy are app-specific and set by Next.js (ai_talent_web/next.config.ts).
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+		-X-Powered-By
+	}
+
+	handle /api/* {
+		# Bound uploads (CVs <= 10 MiB) before they reach the API.
+		request_body {
+			max_size 10MB
+		}
+		reverse_proxy api:8080
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}
