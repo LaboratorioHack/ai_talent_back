@@ -20,8 +20,8 @@ jobs:
       api: ${{ steps.filter.outputs.api }}
       engine: ${{ steps.filter.outputs.engine }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: |
@@ -39,8 +39,8 @@ jobs:
       run:
         working-directory: src/api
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
       # NuGetAudit (Directory.Build.props) makes restore fail on vulnerable packages (OWASP A03).
@@ -58,8 +58,8 @@ jobs:
       run:
         working-directory: src/ai_engine
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - run: uv sync --frozen
@@ -77,8 +77,8 @@ jobs:
     if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/dependency-review-action@v4
+      - uses: actions/checkout@v7
+      - uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
 

@@ -28,8 +28,8 @@ jobs:
       db: ${{ steps.filter.outputs.db == 'true' }}
       deploy: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.deploy == 'true' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: |
@@ -51,8 +51,8 @@ jobs:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v1
+      - uses: actions/checkout@v7
+      - uses: supabase/setup-cli@v3
         with:
           version: latest
       - run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_ID }}
@@ -73,17 +73,17 @@ jobs:
       - name: Skip if unchanged
         id: gate
         run: echo "run=${{ needs.changes.outputs[matrix.service] }}" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: steps.gate.outputs.run == 'true'
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
         if: steps.gate.outputs.run == 'true'
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@v4
         if: steps.gate.outputs.run == 'true'
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@v7
         if: steps.gate.outputs.run == 'true'
         with:
           context: ${{ matrix.context }}
@@ -103,10 +103,10 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Copy compose + Caddyfile
-        uses: appleboy/scp-action@v0.1.7
+        uses: appleboy/scp-action@v1.0.0
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
@@ -116,7 +116,7 @@ jobs:
           strip_components: 1
 
       - name: Pull & restart changed services
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@v1.2.5
         env:
           SERVICES: >-
             ${{ needs.changes.outputs.api == 'true' && 'api' || '' }}
