@@ -16,6 +16,9 @@ permissions:
 jobs:
   changes:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read # paths-filter lists the PR files through the GitHub API
     outputs:
       api: ${{ steps.filter.outputs.api }}
       engine: ${{ steps.filter.outputs.engine }}
@@ -82,13 +85,25 @@ jobs:
         with:
           fail-on-severity: high
 
-  # Single required status check for branch protection (skipped jobs count as OK).
+  # Single required status check for branch protection.
+  # `changes` must succeed (if it fails, api/engine are skipped and would look "green").
+  # The other jobs may be skipped (unchanged service / private repo) but never fail.
   ci-ok:
     if: always()
-    needs: [api, engine, dependency-review]
+    needs: [changes, api, engine, dependency-review]
     runs-on: ubuntu-latest
     steps:
-      - run: |
-          if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
-            exit 1
+      - name: Verify results
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "changes=$CHANGES | all=$RESULTS"
+          if [[ "$CHANGES" != "success" ]]; then
+            echo "::error::Job 'changes' did not succeed"; exit 1
           fi
+          for r in $RESULTS; do
+            if [[ "$r" != "success" && "$r" != "skipped" ]]; then
+              echo "::error::A required job ended with '$r'"; exit 1
+            fi
+          done
