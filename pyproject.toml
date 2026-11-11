@@ -1,0 +1,20 @@
+[project]
+name = "ai-talent-back"
+version = "0.0.0"
+description = "AI Talent Scout backend — dev commands (API .NET + AI Engine)"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+dev = "tooling.dev:main"
+test-engine = "tooling.dev:test_engine"
+
+[build-system]
+requires = ["uv_build>=0.12.19,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.uv]
+package = true
+
+[tool.uv.build-backend]
+module-name = "tooling"

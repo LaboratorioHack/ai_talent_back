@@ -105,7 +105,7 @@ app.UseStatusCodePages();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi().AllowAnonymous();
-    app.MapScalarApiReference().AllowAnonymous();
+    app.MapScalarApiReference(options => options.WithTitle("AI Talent Scout — API")).AllowAnonymous();
 }
 
 app.UseAuthentication();

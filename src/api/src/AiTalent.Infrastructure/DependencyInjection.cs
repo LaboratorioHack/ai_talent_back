@@ -4,6 +4,7 @@ using AiTalent.Infrastructure.AiEngine;
 using AiTalent.Infrastructure.Auth;
 using AiTalent.Infrastructure.Persistence;
 using AiTalent.Infrastructure.Persistence.Repositories;
+using AiTalent.Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -49,6 +50,7 @@ public static class DependencyInjection
         });
 
         services.Configure<AiEngineOptions>(configuration.GetSection(AiEngineOptions.SectionName));
+        services.Configure<R2StorageOptions>(configuration.GetSection(R2StorageOptions.SectionName));
         services.AddHttpClient<IAiEngineClient, AiEngineClient>((sp, client) =>
             {
                 var options = sp.GetRequiredService<IOptions<AiEngineOptions>>().Value;
