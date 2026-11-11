@@ -18,6 +18,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\AiTalent.Domain\AiTalent.Domain.csproj" />
     <ProjectReference Include="..\..\src\AiTalent.Application\AiTalent.Application.csproj" />
+    <ProjectReference Include="..\..\src\AiTalent.Infrastructure\AiTalent.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
