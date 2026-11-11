@@ -4,31 +4,64 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    # Local dev: run from src/ai_engine -> reads ai_talent_back/.env.development (shared with
-    # the .NET API); a local src/ai_engine/.env overrides it. Missing files are ignored, and real
-    # environment variables (Docker/production) always take precedence over both.
-    model_config = SettingsConfigDict(env_file=("../../.env.development", ".env"), extra="ignore")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     environment: str = "development"
 
-    # Shared secret with the .NET API (header X-Internal-Api-Key).
     engine_api_key: str = ""
 
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-sonnet-5-5"
+    anthropic_vision_model: str = ""
 
-    embeddings_provider: str = "voyage"
-    voyage_api_key: str = ""
+    # Embeddings: Nvidia (primary) + Voyage (fallback), both via OpenRouter
+    openrouter_api_key: str = ""
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    embeddings_dimensions: int = 1024
+    embeddings_model: str = "nvidia/nv-embed-v1"
+    embeddings_model_fallback: str = "voyage/voyage-3-lite"
 
     supabase_url: str = ""
     supabase_service_role_key: str = ""
     database_url: str = ""
 
+    # CV files: `supabase` | `r2` | `auto` (R2 if R2_ACCESS_KEY_ID is set, else Supabase)
+    storage_backend: str = "auto"
+    r2_account_id: str = ""
+    r2_access_key_id: str = ""
+    r2_secret_access_key: str = ""
+    r2_bucket_name: str = "cvs"
+    r2_endpoint_url: str = ""
+    r2_public_base_url: str = ""
+
     max_upload_bytes: int = 10 * 1024 * 1024
+    extractor_version: str = "v1.0.0"
+    prompt_version: str = "eval-v1"
 
     @property
     def is_production(self) -> bool:
         return self.environment.lower() == "production"
+
+    @property
+    def vision_model(self) -> str:
+        return self.anthropic_vision_model or self.anthropic_model
+
+    @property
+    def r2_endpoint(self) -> str:
+        if self.r2_endpoint_url:
+            return self.r2_endpoint_url.rstrip("/")
+        if self.r2_account_id:
+            return f"https://{self.r2_account_id}.r2.cloudflarestorage.com"
+        return ""
+
+    @property
+    def uses_r2_storage(self) -> bool:
+        backend = self.storage_backend.lower()
+        if backend == "r2":
+            return True
+        if backend == "supabase":
+            return False
+        return bool(self.r2_access_key_id and self.r2_secret_access_key and self.r2_bucket_name)
 
 
 @lru_cache
