@@ -25,7 +25,8 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
-    depends_on: [web, api]
+    # No depends_on: web and api are deployed by different repos (each can only pull its own
+    # GHCR image). Caddy returns 502 for a backend until that backend is up.
 
   web:
     <<: *hardening
