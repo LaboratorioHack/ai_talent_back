@@ -7,6 +7,7 @@ using AiTalent.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -86,6 +87,7 @@ app.UseStatusCodePages();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi().AllowAnonymous();
+    app.MapScalarApiReference(options => options.WithTitle("AI Talent Scout — API")).AllowAnonymous();
 }
 
 app.UseAuthentication();

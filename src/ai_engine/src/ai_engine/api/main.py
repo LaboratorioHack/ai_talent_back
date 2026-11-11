@@ -2,23 +2,33 @@ import logging
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
+from scalar_fastapi import add_scalar_reference
 
-from ai_engine.api.routers import health
+from ai_engine.api.openapi import configure_openapi
+from ai_engine.api.routers import cvs, evaluations, health, rag
 from ai_engine.core.config import get_settings
 from ai_engine.core.security import require_internal_api_key
 
 logger = logging.getLogger("ai_engine")
 settings = get_settings()
 
+# OWASP A02: no Swagger/ReDoc/Scalar in production.
 app = FastAPI(
     title="AI Talent Scout - AI Engine",
     description="Ingesta y anonimización de CVs, extracción, RAG y agentes de evaluación.",
     version="0.1.0",
-    # OWASP A02: no public API docs in production.
-    docs_url=None if settings.is_production else "/docs",
+    docs_url=None,
     redoc_url=None,
     openapi_url=None if settings.is_production else "/openapi.json",
 )
+
+if not settings.is_production:
+    configure_openapi(app)
+    add_scalar_reference(
+        app,
+        route="/scalar",
+        title="AI Engine — RAG & Evaluación",
+    )
 
 
 # OWASP A10: never leak stack traces or internal details to the caller.
@@ -32,4 +42,6 @@ app.include_router(health.router)
 
 # Every business router goes here, protected by the internal API key:
 protected = [Depends(require_internal_api_key)]
-# app.include_router(evaluations.router, dependencies=protected)
+app.include_router(cvs.router, dependencies=protected)
+app.include_router(evaluations.router, dependencies=protected)
+app.include_router(rag.router, dependencies=protected)
