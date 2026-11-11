@@ -18,6 +18,8 @@ permissions:
 env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ghcr.io/laboratoriohack/ai-talent
+  # Folder on the EC2 host (user-owned; no sudo needed). Override with repo variable DEPLOY_PATH.
+  DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/home/ubuntu/ai-talent' }}
 
 jobs:
   changes:
@@ -112,7 +114,7 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           source: "deploy/docker-compose.yml,deploy/Caddyfile"
-          target: /opt/ai-talent
+          target: ${{ env.DEPLOY_PATH }}
           strip_components: 1
 
       - name: Pull & restart changed services
@@ -128,7 +130,7 @@ jobs:
           envs: SERVICES
           script: |
             set -e
-            cd /opt/ai-talent
+            cd "${{ env.DEPLOY_PATH }}"
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
             if [ -n "$(echo $SERVICES | xargs)" ]; then docker compose pull $SERVICES; fi
             docker compose up -d --remove-orphans $SERVICES caddy
