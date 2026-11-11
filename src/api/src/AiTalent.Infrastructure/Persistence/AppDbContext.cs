@@ -1,3 +1,4 @@
+using AiTalent.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiTalent.Infrastructure.Persistence;
@@ -7,6 +8,10 @@ namespace AiTalent.Infrastructure.Persistence;
 /// </summary>
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
+    public DbSet<Company> Companies => Set<Company>();
+
+    public DbSet<StaffMember> StaffMembers => Set<StaffMember>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasPostgresExtension("vector");

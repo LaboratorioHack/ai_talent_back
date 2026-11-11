@@ -1,9 +1,8 @@
 using System.Net;
-using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace AiTalent.IntegrationTests;
 
-public class HealthEndpointTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public class HealthEndpointTests(TestApiFactory factory) : IClassFixture<TestApiFactory>
 {
     [Fact]
     public async Task HealthReturnsOk()
