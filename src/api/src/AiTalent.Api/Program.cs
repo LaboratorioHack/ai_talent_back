@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 using AiTalent.Api.Endpoints;
+using AiTalent.Api.Extensions;
 using AiTalent.Application;
 using AiTalent.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -8,6 +9,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Local dev: read ai_talent_back/.env.development (same file the AI Engine uses).
+builder.AddDotEnvForDevelopment();
 
 // OWASP A06 (Insecure Design): bound request size (CV uploads are capped at 10 MiB).
 builder.WebHost.ConfigureKestrel(kestrel => kestrel.Limits.MaxRequestBodySize = 10 * 1024 * 1024);
@@ -35,6 +39,8 @@ builder.Services
         }
 
         options.Authority = $"{supabaseUrl}/auth/v1";
+        // Local Supabase (`supabase start`) serves plain http; production must be https.
+        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
         options.MapInboundClaims = false;
         options.TokenValidationParameters.ValidIssuer = $"{supabaseUrl}/auth/v1";
         options.TokenValidationParameters.ValidAudience = "authenticated";

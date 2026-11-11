@@ -4,7 +4,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # Local dev: run from src/ai_engine -> reads ai_talent_back/.env.development (shared with
+    # the .NET API); a local src/ai_engine/.env overrides it. Missing files are ignored, and real
+    # environment variables (Docker/production) always take precedence over both.
+    model_config = SettingsConfigDict(env_file=("../../.env.development", ".env"), extra="ignore")
 
     environment: str = "development"
 
