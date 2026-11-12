@@ -260,8 +260,19 @@ internal sealed class FakeAiEngineClient : IAiEngineClient
     public Task<CandidateEvaluationResponse> EvaluateAsync(EvaluateCandidateRequest request, CancellationToken cancellationToken = default) =>
         throw new NotImplementedException();
 
-    public Task<RankCandidatesResponse> RankCandidatesAsync(RankCandidatesRequest request, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
+    public Task<RankCandidatesResponse> RankCandidatesAsync(RankCandidatesRequest request, CancellationToken cancellationToken = default)
+    {
+        var ranked = request.ResumeIds
+            .Select((resumeId, index) => new RankedCandidateDto(
+                resumeId,
+                Guid.NewGuid(),
+                90f - index,
+                0.8f,
+                "MEETS",
+                true))
+            .ToList();
+        return Task.FromResult(new RankCandidatesResponse(request.RoleProfileId, ranked));
+    }
 
     public Task<EvidenceSearchResponse> SearchEvidenceAsync(EvidenceSearchRequest request, CancellationToken cancellationToken = default) =>
         throw new NotImplementedException();

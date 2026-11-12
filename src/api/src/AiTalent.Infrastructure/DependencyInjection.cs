@@ -25,6 +25,9 @@ public static class DependencyInjection
         services.AddScoped<ICandidateRepository, CandidateRepository>();
         services.AddScoped<IResumeRepository, ResumeRepository>();
         services.AddScoped<IApplicationRepository, ApplicationRepository>();
+        services.AddScoped<IEvaluationReadStore, EvaluationReadStore>();
+        services.AddScoped<IInterviewReadStore, InterviewReadStore>();
+        services.AddScoped<IGovernanceReadStore, GovernanceReadStore>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IAuditLog, AuditLog>();
         services.AddScoped<ICvFileStorage, CvFileStorage>();

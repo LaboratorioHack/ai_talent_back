@@ -1,6 +1,9 @@
 using AiTalent.Application.Features.Auth;
 using AiTalent.Application.Features.Candidates;
 using AiTalent.Application.Features.Companies;
+using AiTalent.Application.Features.Governance;
+using AiTalent.Application.Features.Interviews;
+using AiTalent.Application.Features.Rankings;
 using AiTalent.Application.Features.Staff;
 using AiTalent.Application.Features.Vacancies;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,6 +22,9 @@ public static class DependencyInjection
         services.AddScoped<VacancyService>();
         services.AddScoped<CandidateApplicationService>();
         services.AddScoped<ApplicationListService>();
+        services.AddScoped<RankingService>();
+        services.AddScoped<InterviewService>();
+        services.AddScoped<GovernanceService>();
         return services;
     }
 }
