@@ -91,3 +91,11 @@ internal sealed record RequirementRequest(
     string? Condition,
     decimal? Weight,
     IReadOnlyDictionary<string, int>? Equivalences);
+
+internal sealed record CandidateApplicationResponse(
+    Guid ApplicationId,
+    Guid CandidateId,
+    Guid ResumeId,
+    string Status,
+    bool DuplicateContent,
+    string Message);

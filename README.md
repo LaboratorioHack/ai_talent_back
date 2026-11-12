@@ -99,6 +99,7 @@ Cada vacante tiene un perfil de cargo versionado con sus requisitos. El perfil s
 | POST | `/api/vacancies/{id}/close` | Pasa de `OPEN` a `CLOSED`. |
 | DELETE | `/api/vacancies/{id}` | Borrado lógico: deja de aparecer y responde 404, pero conserva postulaciones y auditoría. |
 | PUT | `/api/vacancies/{id}/profile` | Reemplaza descripción y requisitos. Crea versión nueva si el perfil ya se usó. |
+| POST | `/api/vacancies/{id}/applications` | **Público (sin login).** Postulación de un candidato con un solo CV (`multipart/form-data`: `file` PDF/DOCX ≤ 10 MB, `name`, `email`, `consent=true`). Solo vacantes `OPEN` y antes del cierre; volver a postular a la misma vacante se rechaza. No devuelve puntajes ni ranking. |
 
 Cada requisito lleva `type` (`MANDATORY`, `DESIRABLE`, `DISQUALIFYING`), `weight` (0–100) y `equivalences` como porcentajes, por ejemplo `{ "AWS": 80 }` para "AWS cuenta 80% de Azure".
 Los conteos de la lista (`resumes`, `meets`, `partiallyMeets`, `doesNotMeet`, `disqualified`, `interviews`) se devuelven en cero hasta que existan la carga de CVs y las evaluaciones.

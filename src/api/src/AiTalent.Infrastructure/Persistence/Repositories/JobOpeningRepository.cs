@@ -48,6 +48,11 @@ internal sealed class JobOpeningRepository(AppDbContext db) : IJobOpeningReposit
                 opening => opening.Id == id && opening.CompanyId == companyId && opening.DeletedAt == null,
                 ct);
 
+    public Task<JobOpening?> FindForApplicationAsync(Guid id, CancellationToken ct = default) =>
+        db.JobOpenings
+            .AsNoTracking()
+            .FirstOrDefaultAsync(opening => opening.Id == id && opening.DeletedAt == null, ct);
+
     public async Task<bool> IsProfileInUseAsync(Guid roleProfileId, CancellationToken ct = default)
     {
         // Evaluations are not mapped yet; a scalar query keeps this module independent.

@@ -1,7 +1,9 @@
 using AiTalent.Application.Abstractions;
+using AiTalent.Application.Abstractions.AiEngine;
 using AiTalent.Application.Common;
 using AiTalent.Domain.Entities;
 using AiTalent.Domain.Enums;
+using ApplicationEntity = AiTalent.Domain.Entities.Application;
 
 namespace AiTalent.UnitTests;
 
@@ -58,6 +60,9 @@ internal sealed class FakeJobOpeningRepository : IJobOpeningRepository
     public Task<JobOpening?> FindByIdAsync(Guid companyId, Guid id, CancellationToken ct = default) =>
         Task.FromResult(Vacancies.FirstOrDefault(vacancy =>
             vacancy.Id == id && vacancy.CompanyId == companyId && vacancy.DeletedAt is null));
+
+    public Task<JobOpening?> FindForApplicationAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult(Vacancies.FirstOrDefault(vacancy => vacancy.Id == id && vacancy.DeletedAt is null));
 
     public Task<bool> IsProfileInUseAsync(Guid roleProfileId, CancellationToken ct = default) =>
         Task.FromResult(UsedProfiles.Contains(roleProfileId));
@@ -121,4 +126,109 @@ internal sealed class FakeInviteCodes : IInviteCodes
 
     public Task<InviteClaims?> ReadAsync(string code, CancellationToken ct = default) =>
         Task.FromResult(_codes.GetValueOrDefault(code));
+}
+
+internal sealed class FakeCandidateRepository : ICandidateRepository
+{
+    public List<Candidate> Candidates { get; } = [];
+
+    public Task<Candidate?> FindByCompanyAndEmailAsync(Guid companyId, string normalizedEmail, CancellationToken ct = default) =>
+        Task.FromResult(Candidates.FirstOrDefault(c =>
+            c.CompanyId == companyId && string.Equals(c.ContactEmail, normalizedEmail, StringComparison.Ordinal)));
+
+    public Task<Candidate?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult(Candidates.FirstOrDefault(c => c.Id == id));
+
+    public void Add(Candidate candidate) => Candidates.Add(candidate);
+
+    public void Remove(Candidate candidate) => Candidates.Remove(candidate);
+}
+
+internal sealed class FakeResumeRepository : IResumeRepository
+{
+    public List<Resume> Resumes { get; } = [];
+
+    public Task<int> GetNextVersionAsync(Guid candidateId, CancellationToken ct = default)
+    {
+        var max = Resumes.Where(r => r.CandidateId == candidateId).Select(r => (int?)r.Version).Max();
+        return Task.FromResult((max ?? 0) + 1);
+    }
+
+    public Task<bool> ExistsWithHashAsync(Guid candidateId, string fileHash, CancellationToken ct = default) =>
+        Task.FromResult(Resumes.Any(r => r.CandidateId == candidateId && r.FileHash == fileHash));
+
+    public Task<Resume?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult(Resumes.FirstOrDefault(r => r.Id == id));
+
+    public void Add(Resume resume) => Resumes.Add(resume);
+
+    public void Remove(Resume resume) => Resumes.Remove(resume);
+}
+
+internal sealed class FakeApplicationRepository : IApplicationRepository
+{
+    public List<ApplicationEntity> Applications { get; } = [];
+
+    public Task<ApplicationEntity?> FindByJobAndCandidateAsync(Guid jobOpeningId, Guid candidateId, CancellationToken ct = default) =>
+        Task.FromResult(Applications.FirstOrDefault(a =>
+            a.JobOpeningId == jobOpeningId && a.CandidateId == candidateId));
+
+    public void Add(ApplicationEntity application) => Applications.Add(application);
+
+    public void Remove(ApplicationEntity application) => Applications.Remove(application);
+}
+
+internal sealed class FakeCvFileStorage : ICvFileStorage
+{
+    public List<(string Key, string ContentType, byte[] Bytes)> Uploads { get; } = [];
+    public bool ThrowOnUpload { get; set; }
+
+    public async Task<string> UploadAsync(string fileKey, Stream content, string contentType, CancellationToken ct = default)
+    {
+        if (ThrowOnUpload)
+        {
+            throw new InvalidOperationException("storage unavailable");
+        }
+
+        using var ms = new MemoryStream();
+        await content.CopyToAsync(ms, ct);
+        Uploads.Add((fileKey, contentType, ms.ToArray()));
+        return fileKey;
+    }
+}
+
+internal sealed class FakeAiEngineClient : IAiEngineClient
+{
+    public bool Healthy { get; set; } = true;
+    public Exception? ThrowOnIngest { get; set; }
+    public List<Guid> IngestedResumeIds { get; } = [];
+
+    public Task<bool> IsHealthyAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(Healthy);
+
+    public Task<CvIngestionResponse> IngestCvAsync(IngestCvRequest request, CancellationToken cancellationToken = default)
+    {
+        IngestedResumeIds.Add(request.ResumeId);
+        if (ThrowOnIngest is not null)
+        {
+            throw ThrowOnIngest;
+        }
+
+        return Task.FromResult(new CvIngestionResponse(
+            request.ResumeId,
+            "extractor-v1",
+            "text",
+            null,
+            1,
+            null));
+    }
+
+    public Task<CandidateEvaluationResponse> EvaluateAsync(EvaluateCandidateRequest request, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    public Task<RankCandidatesResponse> RankCandidatesAsync(RankCandidatesRequest request, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
+
+    public Task<EvidenceSearchResponse> SearchEvidenceAsync(EvidenceSearchRequest request, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
 }
