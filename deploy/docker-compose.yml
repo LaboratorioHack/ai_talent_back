@@ -18,6 +18,7 @@ services:
     ports: ["80:80", "443:443"]
     environment:
       DOMAIN: ${DOMAIN}
+      LANDING_DOMAIN: ${LANDING_DOMAIN:-criba.isroot.in}
     cap_drop: [ALL]
     cap_add: [NET_BIND_SERVICE]
     security_opt: ["no-new-privileges:true"]
@@ -25,7 +26,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
-    # No depends_on: web and api are deployed by different repos (each can only pull its own
+    # No depends_on: web, landing and api are deployed by different repos (each can only pull its own
     # GHCR image). Caddy returns 502 for a backend until that backend is up.
 
   web:
@@ -33,6 +34,12 @@ services:
     image: ghcr.io/laboratoriohack/ai-talent-web:latest
     tmpfs: ["/tmp", "/app/.next/cache:uid=1000,gid=1000"]   # Next.js cache needs a writable dir
     expose: ["3000"]
+
+  landing:
+    <<: *hardening
+    # Landing estática (repo ai_talent_landing): nginx sin root en el 8080; Caddy la sirve en LANDING_DOMAIN.
+    image: ghcr.io/laboratoriohack/ai-talent-landing:latest
+    expose: ["8080"]
 
   api:
     <<: *hardening

@@ -23,3 +23,19 @@
 		reverse_proxy web:3000
 	}
 }
+
+# Landing pública (ai_talent_landing). Sus enlaces llevan a la app en {$DOMAIN}.
+{$LANDING_DOMAIN:criba.isroot.in} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		-Server
+		-X-Powered-By
+	}
+
+	reverse_proxy landing:8080
+}
