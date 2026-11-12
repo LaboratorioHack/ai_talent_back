@@ -22,8 +22,12 @@ public static class DependencyInjection
         services.AddScoped<ICompanyRepository, CompanyRepository>();
         services.AddScoped<IStaffRepository, StaffRepository>();
         services.AddScoped<IJobOpeningRepository, JobOpeningRepository>();
+        services.AddScoped<ICandidateRepository, CandidateRepository>();
+        services.AddScoped<IResumeRepository, ResumeRepository>();
+        services.AddScoped<IApplicationRepository, ApplicationRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IAuditLog, AuditLog>();
+        services.AddScoped<ICvFileStorage, CvFileStorage>();
 
         // OWASP A02: the API refuses to start without a strong invite-code signing key.
         services.AddOptions<InviteCodeOptions>()
@@ -35,6 +39,7 @@ public static class DependencyInjection
 
         services.Configure<AiEngineOptions>(configuration.GetSection(AiEngineOptions.SectionName));
         services.Configure<R2StorageOptions>(configuration.GetSection(R2StorageOptions.SectionName));
+        services.AddHttpClient();
         services.AddHttpClient<IAiEngineClient, AiEngineClient>((sp, client) =>
             {
                 var options = sp.GetRequiredService<IOptions<AiEngineOptions>>().Value;

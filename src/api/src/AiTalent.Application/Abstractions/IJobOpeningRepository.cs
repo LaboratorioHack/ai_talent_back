@@ -21,6 +21,9 @@ public interface IJobOpeningRepository
 
     Task<JobOpening?> FindByIdAsync(Guid companyId, Guid id, CancellationToken ct = default);
 
+    /// <summary>Loads a non-deleted vacancy for public application checks (no company scoping).</summary>
+    Task<JobOpening?> FindForApplicationAsync(Guid id, CancellationToken ct = default);
+
     Task<bool> IsProfileInUseAsync(Guid roleProfileId, CancellationToken ct = default);
 
     void Add(JobOpening jobOpening);

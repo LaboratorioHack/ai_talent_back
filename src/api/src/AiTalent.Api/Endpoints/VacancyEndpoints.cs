@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using AiTalent.Application.Features.Candidates;
 using AiTalent.Application.Features.Vacancies;
 using AiTalent.Domain.Entities;
 using AiTalent.Domain.Enums;
@@ -199,8 +200,105 @@ internal static class VacancyEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        vacancies.MapGet("{id:guid}/applications", async (
+                Guid id,
+                ClaimsPrincipal user,
+                ApplicationListService service,
+                CancellationToken ct) =>
+            {
+                var result = await service.ListByVacancyAsync(user.ToUserId(), id, ct);
+                return result.ToHttpResult(items => Results.Ok(items.Select(item => new VacancyApplicationResponse(
+                    item.ApplicationId,
+                    item.CandidateId,
+                    item.CandidateName,
+                    item.CandidateEmail,
+                    item.Source,
+                    item.SelectionStatus,
+                    item.AppliedAt,
+                    item.UpdatedAt,
+                    item.ResumeId,
+                    item.ResumeVersion,
+                    item.ProcessingStatus,
+                    item.ProcessingError,
+                    item.ResumeCreatedAt)).ToList()));
+            })
+            .WithName("ListVacancyApplications")
+            .WithSummary("List applications for a vacancy")
+            .WithDescription("Lists candidate applications submitted to a vacancy, including candidate contact details and latest resume processing status. Company-scoped.")
+            .Produces<IReadOnlyList<VacancyApplicationResponse>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
+        vacancies.MapPost("{id:guid}/applications", async (
+                Guid id,
+                HttpRequest request,
+                CandidateApplicationService service,
+                CancellationToken ct) =>
+            {
+                if (!request.HasFormContentType)
+                {
+                    return Results.Problem(
+                        detail: "A multipart form with the CV file is required.",
+                        statusCode: StatusCodes.Status400BadRequest);
+                }
+
+                var form = await request.ReadFormAsync(ct);
+                var file = form.Files.GetFile("file") ?? form.Files.FirstOrDefault();
+                if (file is null)
+                {
+                    return Results.Problem(
+                        detail: "A CV file is required (PDF or DOCX).",
+                        statusCode: StatusCodes.Status400BadRequest);
+                }
+
+                var name = form["name"].ToString();
+                var email = form["email"].ToString();
+                var consent = TryParseConsent(form["consent"].ToString());
+
+                var result = await service.ApplyAsync(
+                    new ApplyToVacancyCommand(
+                        id,
+                        name,
+                        email,
+                        consent,
+                        file.FileName,
+                        file.ContentType,
+                        file.Length,
+                        file.OpenReadStream),
+                    ct);
+
+                return result.ToHttpResult(receipt => Results.Created(
+                    $"/api/vacancies/{id}/applications/{receipt.ApplicationId}",
+                    new CandidateApplicationResponse(
+                        receipt.ApplicationId,
+                        receipt.CandidateId,
+                        receipt.ResumeId,
+                        receipt.Status,
+                        receipt.DuplicateContent,
+                        "Your application was received.")));
+            })
+            .AllowAnonymous()
+            .RequireRateLimiting(RateLimitPolicies.CandidateApply)
+            .DisableAntiforgery()
+            .Accepts<IFormFile>("multipart/form-data")
+            .WithName("ApplyToVacancy")
+            .WithSummary("Submit a CV to a vacancy")
+            .WithDescription("Public endpoint for a candidate to apply to an open vacancy with a single CV (PDF/DOCX, max 10 MB). Requires `name`, `email`, `consent=true`, and `file`. Reapplying to the same vacancy is rejected. Does not return scores or rankings.")
+            .Produces<CandidateApplicationResponse>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         return app;
     }
+
+    private static bool TryParseConsent(string? value) =>
+        bool.TryParse(value, out var parsed) && parsed
+        || string.Equals(value, "1", StringComparison.Ordinal)
+        || string.Equals(value, "on", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(value, "yes", StringComparison.OrdinalIgnoreCase);
 
     private static bool TryBuildProfile(
         string? description,
