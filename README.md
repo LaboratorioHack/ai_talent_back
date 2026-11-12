@@ -84,6 +84,25 @@ Documentación interactiva: `http://localhost:5022/scalar/v1` (solo en Developme
 - Quien ya pertenece a una empresa no puede unirse a otra (409).
 - Si entra la persona equivocada, un admin la desactiva con `PATCH` y pierde acceso de inmediato.
 
+### Vacantes y perfil de cargo
+
+Cualquier miembro activo (ADMIN o RECRUITER) puede gestionar las vacantes de su empresa; no hace falta MFA.
+Cada vacante tiene un perfil de cargo versionado con sus requisitos. El perfil se puede editar mientras no se haya usado en una evaluación; después, cada cambio crea una versión nueva para que los puntajes sigan siendo auditables.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/api/vacancies?status=&q=&page=&pageSize=` | Lista las vacantes de la empresa, más recientes primero. `status`: `DRAFT`, `OPEN` o `CLOSED`; `q` busca en título y área. |
+| POST | `/api/vacancies` | Crea un borrador con su perfil y requisitos en una sola llamada. Body: `{ title, area, closingAt, positions, description, requirements }`. |
+| GET | `/api/vacancies/{id}` | Devuelve la vacante con su perfil actual, requisitos y suma de pesos. |
+| PATCH | `/api/vacancies/{id}` | Actualiza título, área, fecha de cierre y número de plazas. |
+| POST | `/api/vacancies/{id}/publish` | Pasa de `DRAFT` a `OPEN`. Exige al menos un requisito y pesos que sumen 100. |
+| POST | `/api/vacancies/{id}/close` | Pasa de `OPEN` a `CLOSED`. |
+| DELETE | `/api/vacancies/{id}` | Borrado lógico: deja de aparecer y responde 404, pero conserva postulaciones y auditoría. |
+| PUT | `/api/vacancies/{id}/profile` | Reemplaza descripción y requisitos. Crea versión nueva si el perfil ya se usó. |
+
+Cada requisito lleva `type` (`MANDATORY`, `DESIRABLE`, `DISQUALIFYING`), `weight` (0–100) y `equivalences` como porcentajes, por ejemplo `{ "AWS": 80 }` para "AWS cuenta 80% de Azure".
+Los conteos de la lista (`resumes`, `meets`, `partiallyMeets`, `doesNotMeet`, `disqualified`, `interviews`) se devuelven en cero hasta que existan la carga de CVs y las evaluaciones.
+
 ### Alta de usuarios (registro cerrado)
 
 No hay registro público: `supabase/config.toml` define `enable_signup = false` y la API no expone `/api/auth/signup`. El login, el refresh de token y la recuperación de contraseña siguen funcionando en Supabase Auth.

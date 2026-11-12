@@ -28,6 +28,63 @@ internal sealed class FakeCompanyRepository : ICompanyRepository
     public void Add(Company company) => Companies.Add(company);
 }
 
+internal sealed class FakeJobOpeningRepository : IJobOpeningRepository
+{
+    public List<JobOpening> Vacancies { get; } = [];
+
+    public HashSet<Guid> UsedProfiles { get; } = [];
+
+    public Task<IReadOnlyList<JobOpening>> ListByCompanyAsync(
+        Guid companyId,
+        JobOpeningStatus? status,
+        string? search,
+        int skip,
+        int take,
+        CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<JobOpening>>(
+            Filter(companyId, status, search)
+                .OrderByDescending(vacancy => vacancy.CreatedAt)
+                .Skip(skip)
+                .Take(take)
+                .ToList());
+
+    public Task<int> CountByCompanyAsync(
+        Guid companyId,
+        JobOpeningStatus? status,
+        string? search,
+        CancellationToken ct = default) =>
+        Task.FromResult(Filter(companyId, status, search).Count());
+
+    public Task<JobOpening?> FindByIdAsync(Guid companyId, Guid id, CancellationToken ct = default) =>
+        Task.FromResult(Vacancies.FirstOrDefault(vacancy =>
+            vacancy.Id == id && vacancy.CompanyId == companyId && vacancy.DeletedAt is null));
+
+    public Task<bool> IsProfileInUseAsync(Guid roleProfileId, CancellationToken ct = default) =>
+        Task.FromResult(UsedProfiles.Contains(roleProfileId));
+
+    public void Add(JobOpening jobOpening) => Vacancies.Add(jobOpening);
+
+    private IEnumerable<JobOpening> Filter(Guid companyId, JobOpeningStatus? status, string? search)
+    {
+        var query = Vacancies.Where(vacancy => vacancy.CompanyId == companyId && vacancy.DeletedAt is null);
+
+        if (status is { } statusFilter)
+        {
+            query = query.Where(vacancy => vacancy.Status == statusFilter);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = query.Where(vacancy =>
+                vacancy.Title.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase)
+                || (vacancy.Area is not null
+                    && vacancy.Area.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase)));
+        }
+
+        return query;
+    }
+}
+
 internal sealed class FakeUnitOfWork(bool duplicateKey = false) : IUnitOfWork
 {
     public Task SaveChangesAsync(CancellationToken ct = default) =>

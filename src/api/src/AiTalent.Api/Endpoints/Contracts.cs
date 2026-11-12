@@ -13,3 +13,81 @@ internal sealed record InviteCodeResponse(string Code, DateTimeOffset ExpiresAt)
 internal sealed record StaffResponse(Guid UserId, string Name, string Role, bool Active);
 
 internal sealed record MeResponse(Guid UserId, string? Email, string? Name, bool MfaVerified, CompanyResponse? Company);
+
+internal sealed record VacancyPageResponse(
+    IReadOnlyList<VacancySummaryResponse> Items,
+    int Page,
+    int PageSize,
+    int Total);
+
+internal sealed record VacancySummaryResponse(
+    Guid Id,
+    string Title,
+    string? Area,
+    string Status,
+    DateTimeOffset? ClosingAt,
+    int Positions,
+    int? ProfileVersion,
+    VacancyCountsResponse Counts,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+
+internal sealed record VacancyDetailResponse(
+    Guid Id,
+    string Title,
+    string? Area,
+    string Status,
+    DateTimeOffset? ClosingAt,
+    int Positions,
+    Guid? ProfileId,
+    int? ProfileVersion,
+    string? Description,
+    decimal WeightTotal,
+    bool ProfileInUse,
+    IReadOnlyList<RequirementResponse> Requirements,
+    VacancyCountsResponse Counts,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset UpdatedAt);
+
+internal sealed record VacancyCountsResponse(
+    int Resumes,
+    int Meets,
+    int PartiallyMeets,
+    int DoesNotMeet,
+    int Disqualified,
+    int Interviews);
+
+internal sealed record RequirementResponse(
+    Guid Id,
+    string Type,
+    string? Category,
+    string Description,
+    string? Condition,
+    decimal Weight,
+    IReadOnlyDictionary<string, int> Equivalences);
+
+internal sealed record CreateVacancyRequest(
+    string? Title,
+    string? Area,
+    DateTimeOffset? ClosingAt,
+    int? Positions,
+    string? Description,
+    IReadOnlyList<RequirementRequest>? Requirements);
+
+internal sealed record UpdateVacancyRequest(
+    string? Title,
+    string? Area,
+    DateTimeOffset? ClosingAt,
+    int? Positions);
+
+internal sealed record UpdateVacancyProfileRequest(
+    string? Description,
+    IReadOnlyList<RequirementRequest>? Requirements);
+
+internal sealed record RequirementRequest(
+    string? Type,
+    string? Category,
+    string? Description,
+    string? Condition,
+    decimal? Weight,
+    IReadOnlyDictionary<string, int>? Equivalences);

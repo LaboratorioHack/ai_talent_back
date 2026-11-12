@@ -1,6 +1,7 @@
 using AiTalent.Application.Features.Auth;
 using AiTalent.Application.Features.Companies;
 using AiTalent.Application.Features.Staff;
+using AiTalent.Application.Features.Vacancies;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AiTalent.Application;
@@ -14,6 +15,7 @@ public static class DependencyInjection
         services.AddScoped<AuthService>();
         services.AddScoped<CompanyService>();
         services.AddScoped<StaffService>();
+        services.AddScoped<VacancyService>();
         return services;
     }
 }

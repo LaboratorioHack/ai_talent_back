@@ -110,6 +110,7 @@ app.MapHealthEndpoints();
 app.MapAuthEndpoints();
 app.MapCompanyEndpoints();
 app.MapStaffEndpoints();
+app.MapVacancyEndpoints();
 
 await app.RunAsync();
 
