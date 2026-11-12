@@ -163,6 +163,17 @@ uv run dev
 
 Atajos equivalentes: `make dev` · tests del engine: `uv run test-engine` o `make test-engine`
 
+### Seed de CVs (Kaggle + randomuser.me)
+
+Parea cada candidato sintético de [randomuser.me](https://randomuser.me/) con un CV del [dataset de Snehaan Bhawal](https://www.kaggle.com/datasets/snehaanbhawal/resume-dataset) (PDF + `Resume_str`), sube el archivo a R2/Supabase y corre el pipeline RAG:
+
+```bash
+uv run seed-resumes --limit 25
+uv run seed-resumes --limit 10 --category INFORMATION-TECHNOLOGY
+```
+
+La primera corrida descarga el dataset con `kagglehub` (cache local). Flags útiles: `--skip-storage`, `--force`, `--dataset-dir`, `--concurrency`. Equivalente: `make seed-resumes`.
+
 | Servicio | URL | Docs (Scalar, solo Development) |
 |---|---|---|
 | AI Engine | http://localhost:8000 | http://localhost:8000/scalar |

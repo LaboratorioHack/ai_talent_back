@@ -18,8 +18,14 @@ class Settings(BaseSettings):
     openrouter_api_key: str = ""
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     embeddings_dimensions: int = 1024
-    embeddings_model: str = "nvidia/nv-embed-v1"
-    embeddings_model_fallback: str = "voyage/voyage-3-lite"
+    embeddings_model: str = "nvidia/nemotron-3.5-embed-1b:free"
+    embeddings_model_fallback: str = "mongodb/voyage-4-lite"
+
+    # Jev (TypeSafe System One) via OpenRouter Decisions API — same OPENROUTER_API_KEY
+    jev_model_id: str = "typesafe/jev-1.14"
+    jev_decisions_url: str = "https://openrouter.ai/api/alpha/decisions"
+    jev_noul_yes: float = 0.80
+    jev_noul_no: float = 0.20
 
     supabase_url: str = ""
     supabase_service_role_key: str = ""
@@ -35,7 +41,7 @@ class Settings(BaseSettings):
     r2_public_base_url: str = ""
 
     max_upload_bytes: int = 10 * 1024 * 1024
-    extractor_version: str = "v1.0.0"
+    extractor_version: str = "v1.1.0"
     prompt_version: str = "eval-v1"
 
     @property

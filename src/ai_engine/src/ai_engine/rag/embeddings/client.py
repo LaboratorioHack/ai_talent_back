@@ -1,13 +1,35 @@
 """Embeddings via OpenRouter: Nvidia primary, Voyage fallback (1024-dim for pgvector)."""
 
+from __future__ import annotations
+
 import logging
+import time
 from dataclasses import dataclass
 
-from openai import AsyncOpenAI
+from openai import (
+    APIConnectionError,
+    APIStatusError,
+    APITimeoutError,
+    AsyncOpenAI,
+    OpenAIError,
+    RateLimitError,
+)
 
 from ai_engine.core.config import Settings, get_settings
+from ai_engine.core.retry import (
+    call_with_backoff,
+    headers_from_exc,
+    retry_after_from_headers,
+)
 
 logger = logging.getLogger(__name__)
+
+_EMBED_ATTEMPTS = 4  # 1 try + 3 retries, then Voyage
+_429_FLOORS = (5.0, 10.0, 15.0)
+_NVIDIA_CIRCUIT_SECONDS = 60.0
+
+_nvidia_circuit_until = 0.0
+_nvidia_circuit_logged = False
 
 
 @dataclass(frozen=True)
@@ -15,6 +37,49 @@ class EmbeddingBatch:
     vectors: list[list[float]]
     model: str
     provider: str
+
+
+def _message_looks_like_rate_limit(exc: BaseException) -> bool:
+    text = str(exc).lower()
+    return "429" in text or "rate limit" in text
+
+
+def is_embedding_rate_limit(exc: BaseException) -> bool:
+    if isinstance(exc, RateLimitError):
+        return True
+    if isinstance(exc, APIStatusError) and exc.status_code == 429:
+        return True
+    return _message_looks_like_rate_limit(exc)
+
+
+def is_retryable_embedding_error(exc: BaseException) -> bool:
+    if isinstance(exc, RateLimitError | APITimeoutError | APIConnectionError):
+        return True
+    if isinstance(exc, APIStatusError):
+        return exc.status_code in {408, 409, 429, 500, 502, 503, 504}
+    return bool(isinstance(exc, OpenAIError) and _message_looks_like_rate_limit(exc))
+
+
+def reset_nvidia_circuit() -> None:
+    global _nvidia_circuit_until, _nvidia_circuit_logged
+    _nvidia_circuit_until = 0.0
+    _nvidia_circuit_logged = False
+
+
+def nvidia_circuit_open() -> bool:
+    global _nvidia_circuit_logged
+    if time.monotonic() >= _nvidia_circuit_until:
+        _nvidia_circuit_logged = False
+        return False
+    return True
+
+
+def trip_nvidia_circuit() -> None:
+    global _nvidia_circuit_until, _nvidia_circuit_logged
+    _nvidia_circuit_until = time.monotonic() + _NVIDIA_CIRCUIT_SECONDS
+    if not _nvidia_circuit_logged:
+        logger.warning("Nvidia embedding circuit open (429); using Voyage fallback")
+        _nvidia_circuit_logged = True
 
 
 class EmbeddingsClient:
@@ -25,6 +90,7 @@ class EmbeddingsClient:
             self._openrouter = AsyncOpenAI(
                 api_key=self._settings.openrouter_api_key,
                 base_url=self._settings.openrouter_base_url,
+                max_retries=0,
             )
 
     async def embed_texts(self, texts: list[str]) -> EmbeddingBatch:
@@ -36,15 +102,21 @@ class EmbeddingsClient:
             raise RuntimeError(msg)
 
         errors: list[str] = []
-        try:
-            return await self._embed_openrouter(texts, self._settings.embeddings_model, "nvidia")
-        except Exception as exc:  # noqa: BLE001
-            logger.warning(
-                "Primary embedding model failed (%s): %s",
-                self._settings.embeddings_model,
-                exc,
-            )
-            errors.append(str(exc))
+        skip_primary = nvidia_circuit_open()
+        if not skip_primary:
+            try:
+                return await self._embed_openrouter(
+                    texts, self._settings.embeddings_model, "nvidia"
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "Primary embedding model failed (%s): %s",
+                    self._settings.embeddings_model,
+                    exc,
+                )
+                errors.append(str(exc))
+                if is_embedding_rate_limit(exc):
+                    trip_nvidia_circuit()
 
         try:
             return await self._embed_openrouter(
@@ -63,9 +135,36 @@ class EmbeddingsClient:
         provider: str,
     ) -> EmbeddingBatch:
         assert self._openrouter is not None
-        response = await self._openrouter.embeddings.create(model=model, input=texts)
-        vectors = [_validate_dim(item.embedding) for item in response.data]
-        return EmbeddingBatch(vectors=vectors, model=model, provider=provider)
+        client = self._openrouter
+
+        async def _once() -> EmbeddingBatch:
+            response = await client.embeddings.create(
+                model=model,
+                input=texts,
+                dimensions=self._settings.embeddings_dimensions,
+            )
+            vectors = [_validate_dim(item.embedding) for item in response.data]
+            return EmbeddingBatch(vectors=vectors, model=model, provider=provider)
+
+        def _on_retry(next_attempt: int, total: int, exc: BaseException, delay: float) -> None:
+            logger.info(
+                "%s embed attempt %s/%s after %s; sleeping %.1fs",
+                provider.capitalize(),
+                next_attempt,
+                total,
+                type(exc).__name__,
+                delay,
+            )
+
+        return await call_with_backoff(
+            _once,
+            is_retryable=is_retryable_embedding_error,
+            max_attempts=_EMBED_ATTEMPTS,
+            retry_after=lambda exc: retry_after_from_headers(headers_from_exc(exc)),
+            delay_floors=_429_FLOORS,
+            delay_cap=60.0,
+            on_retry=_on_retry,
+        )
 
 
 def _validate_dim(vector: list[float]) -> list[float]:

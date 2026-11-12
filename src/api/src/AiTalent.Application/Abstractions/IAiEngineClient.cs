@@ -20,4 +20,8 @@ public interface IAiEngineClient
     Task<EvidenceSearchResponse> SearchEvidenceAsync(
         EvidenceSearchRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<CompareCandidatesResponse> CompareAsync(
+        CompareCandidatesRequest request,
+        CancellationToken cancellationToken = default);
 }

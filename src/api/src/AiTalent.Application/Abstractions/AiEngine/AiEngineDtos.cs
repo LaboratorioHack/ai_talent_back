@@ -10,6 +10,18 @@ public sealed record CvIngestionResponse(
     int ChunksCount,
     StructuredCandidateProfile? ProfessionalData);
 
+public sealed record AttributesSanitized(
+    int NamesRemoved = 0,
+    int ContactInfoRemoved = 0,
+    int GenderIndicatorsDetected = 0,
+    int LocationIndicatorsRemoved = 0,
+    int AgeOrDobIndicatorsRemoved = 0);
+
+public sealed record BiasGuardrailTelemetry(
+    bool PiiScrubbed,
+    AttributesSanitized AttributesSanitized,
+    IReadOnlyList<string> ComplianceFlags);
+
 public sealed record StructuredCandidateProfile(
     string Summary,
     int? TotalExperienceMonths,
@@ -17,7 +29,8 @@ public sealed record StructuredCandidateProfile(
     IReadOnlyList<string> Skills,
     string ParserStrategy,
     float? OcrConfidence,
-    string ExtractorVersion);
+    string ExtractorVersion,
+    BiasGuardrailTelemetry? BiasGuardrailTelemetry = null);
 
 public sealed record EvaluateCandidateRequest(
     Guid RoleProfileId,
@@ -41,6 +54,12 @@ public sealed record RequirementAssessmentDto(
     string Justification,
     IReadOnlyList<EvidenceChunkDto> Evidence);
 
+public sealed record FastPassInfoDto(
+    bool Used,
+    bool SkippedClaude,
+    string? Model = null,
+    float? Certainty = null);
+
 public sealed record CandidateEvaluationResponse(
     Guid EvaluationId,
     float TotalScore,
@@ -53,7 +72,8 @@ public sealed record CandidateEvaluationResponse(
     IReadOnlyList<RequirementAssessmentDto> RequirementAssessments,
     string AiModel,
     string PromptVersion,
-    string ReasoningSummary);
+    string ReasoningSummary,
+    FastPassInfoDto? FastPass = null);
 
 public sealed record RankCandidatesRequest(Guid RoleProfileId, IReadOnlyList<Guid> ResumeIds);
 
@@ -70,3 +90,23 @@ public sealed record RankCandidatesResponse(Guid RoleProfileId, IReadOnlyList<Ra
 public sealed record EvidenceSearchRequest(Guid ResumeId, string Query, int Limit = 8);
 
 public sealed record EvidenceSearchResponse(Guid ResumeId, string Query, IReadOnlyList<EvidenceChunkDto> Chunks);
+
+public sealed record CompareCandidatesRequest(Guid RoleProfileId, IReadOnlyList<Guid> ResumeIds);
+
+public sealed record SideBySideCandidateDto(
+    string CandidateId,
+    string PrimaryAdvantage,
+    string PrimaryTradeOffOrGap,
+    string IdealTeamFit);
+
+public sealed record InterviewFocusDto(
+    string CandidateId,
+    string TargetGapToVerify,
+    string SuggestedInterviewQuestion);
+
+public sealed record CompareCandidatesResponse(
+    Guid RoleProfileId,
+    string ComparativeSummary,
+    IReadOnlyList<SideBySideCandidateDto> SideBySideMatrix,
+    string HeadToHeadTradeOff,
+    IReadOnlyList<InterviewFocusDto> RecommendedInterviewFocus);
