@@ -99,3 +99,18 @@ internal sealed record CandidateApplicationResponse(
     string Status,
     bool DuplicateContent,
     string Message);
+
+internal sealed record VacancyApplicationResponse(
+    Guid ApplicationId,
+    Guid CandidateId,
+    string CandidateName,
+    string CandidateEmail,
+    string Source,
+    string SelectionStatus,
+    DateTimeOffset AppliedAt,
+    DateTimeOffset UpdatedAt,
+    Guid? ResumeId,
+    int? ResumeVersion,
+    string? ProcessingStatus,
+    string? ProcessingError,
+    DateTimeOffset? ResumeCreatedAt);

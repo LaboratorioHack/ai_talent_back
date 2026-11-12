@@ -200,6 +200,35 @@ internal static class VacancyEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        vacancies.MapGet("{id:guid}/applications", async (
+                Guid id,
+                ClaimsPrincipal user,
+                ApplicationListService service,
+                CancellationToken ct) =>
+            {
+                var result = await service.ListByVacancyAsync(user.ToUserId(), id, ct);
+                return result.ToHttpResult(items => Results.Ok(items.Select(item => new VacancyApplicationResponse(
+                    item.ApplicationId,
+                    item.CandidateId,
+                    item.CandidateName,
+                    item.CandidateEmail,
+                    item.Source,
+                    item.SelectionStatus,
+                    item.AppliedAt,
+                    item.UpdatedAt,
+                    item.ResumeId,
+                    item.ResumeVersion,
+                    item.ProcessingStatus,
+                    item.ProcessingError,
+                    item.ResumeCreatedAt)).ToList()));
+            })
+            .WithName("ListVacancyApplications")
+            .WithSummary("List applications for a vacancy")
+            .WithDescription("Lists candidate applications submitted to a vacancy, including candidate contact details and latest resume processing status. Company-scoped.")
+            .Produces<IReadOnlyList<VacancyApplicationResponse>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         vacancies.MapPost("{id:guid}/applications", async (
                 Guid id,
                 HttpRequest request,

@@ -168,10 +168,44 @@ internal sealed class FakeResumeRepository : IResumeRepository
 internal sealed class FakeApplicationRepository : IApplicationRepository
 {
     public List<ApplicationEntity> Applications { get; } = [];
+    public List<Candidate> Candidates { get; } = [];
+    public List<Resume> Resumes { get; } = [];
 
     public Task<ApplicationEntity?> FindByJobAndCandidateAsync(Guid jobOpeningId, Guid candidateId, CancellationToken ct = default) =>
         Task.FromResult(Applications.FirstOrDefault(a =>
             a.JobOpeningId == jobOpeningId && a.CandidateId == candidateId));
+
+    public Task<IReadOnlyList<ApplicationSubmission>> ListByJobOpeningAsync(Guid jobOpeningId, CancellationToken ct = default)
+    {
+        var rows = Applications
+            .Where(a => a.JobOpeningId == jobOpeningId)
+            .OrderByDescending(a => a.CreatedAt)
+            .Select(a =>
+            {
+                var candidate = Candidates.First(c => c.Id == a.CandidateId);
+                var resume = Resumes
+                    .Where(r => r.CandidateId == candidate.Id)
+                    .OrderByDescending(r => r.Version)
+                    .ThenByDescending(r => r.CreatedAt)
+                    .FirstOrDefault();
+                return new ApplicationSubmission(
+                    a.Id,
+                    candidate.Id,
+                    candidate.Name,
+                    candidate.ContactEmail,
+                    a.Source.ToString().ToUpperInvariant(),
+                    a.SelectionStatus.ToString().ToUpperInvariant(),
+                    a.CreatedAt,
+                    a.UpdatedAt,
+                    resume?.Id,
+                    resume?.Version,
+                    resume?.ProcessingStatus.ToString().ToUpperInvariant(),
+                    resume?.ProcessingError,
+                    resume?.CreatedAt);
+            })
+            .ToList();
+        return Task.FromResult<IReadOnlyList<ApplicationSubmission>>(rows);
+    }
 
     public void Add(ApplicationEntity application) => Applications.Add(application);
 
