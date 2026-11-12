@@ -56,9 +56,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Pinned (OWASP A03 + no surprise breaking changes): CLI v3 made `db push` target the
+          # local Docker stack by default, which broke this job while it used `latest`.
+          version: 3.1.0
       - run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_ID }}
-      - run: supabase db push
+      # --remote: apply to the linked project (CLI v3 default is the local stack).
+      # --yes: no interactive confirmation in CI.
+      - run: supabase db push --remote --yes
 
   build:
     name: Build ${{ matrix.service }}
