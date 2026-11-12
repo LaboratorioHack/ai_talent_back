@@ -269,3 +269,15 @@ internal sealed class FakeAiEngineClient : IAiEngineClient
     public Task<CompareCandidatesResponse> CompareAsync(CompareCandidatesRequest request, CancellationToken cancellationToken = default) =>
         throw new NotImplementedException();
 }
+
+internal sealed class FakeVacancyInsights : IVacancyInsights
+{
+    public List<ApplicationFact> Facts { get; } = [];
+
+    public Task<IReadOnlyList<ApplicationFact>> ListApplicationFactsAsync(
+        Guid companyId,
+        IReadOnlyCollection<Guid> vacancyIds,
+        CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<ApplicationFact>>(
+            Facts.Where(fact => vacancyIds.Contains(fact.JobOpeningId)).ToList());
+}
