@@ -1,6 +1,8 @@
 from fastapi import APIRouter, HTTPException
 
 from ai_engine.schemas.evaluation import (
+    CompareCandidatesRequest,
+    CompareCandidatesResponse,
     EvaluateRequest,
     EvaluateResponse,
     RankCandidatesRequest,
@@ -27,3 +29,13 @@ async def rank_candidates(body: RankCandidatesRequest) -> RankCandidatesResponse
         return await EvaluationService().rank(body)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post("/compare", response_model=CompareCandidatesResponse)
+async def compare_candidates(body: CompareCandidatesRequest) -> CompareCandidatesResponse:
+    try:
+        return await EvaluationService().compare(body)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc

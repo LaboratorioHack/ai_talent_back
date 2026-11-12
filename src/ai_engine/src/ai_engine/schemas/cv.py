@@ -14,6 +14,20 @@ class WorkExperience(BaseModel):
     technologies: list[str] = Field(default_factory=list)
 
 
+class AttributesSanitized(BaseModel):
+    names_removed: int = 0
+    contact_info_removed: int = 0
+    gender_indicators_detected: int = 0
+    location_indicators_removed: int = 0
+    age_or_dob_indicators_removed: int = 0
+
+
+class BiasGuardrailTelemetry(BaseModel):
+    pii_scrubbed: bool = False
+    attributes_sanitized: AttributesSanitized = Field(default_factory=AttributesSanitized)
+    compliance_flags: list[str] = Field(default_factory=list)
+
+
 class StructuredCandidateProfile(BaseModel):
     summary: str = ""
     total_experience_months: int | None = None
@@ -26,6 +40,7 @@ class StructuredCandidateProfile(BaseModel):
     parser_strategy: str = "native_layout"
     ocr_confidence: float | None = None
     extractor_version: str = ""
+    bias_guardrail_telemetry: BiasGuardrailTelemetry | None = None
 
 
 class CvIngestRequest(BaseModel):

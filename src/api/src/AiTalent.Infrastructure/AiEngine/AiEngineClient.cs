@@ -70,6 +70,14 @@ internal sealed class AiEngineClient(HttpClient httpClient) : IAiEngineClient
             request,
             cancellationToken);
 
+    public Task<CompareCandidatesResponse> CompareAsync(
+        CompareCandidatesRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostJsonAsync<CompareCandidatesRequest, CompareCandidatesResponse>(
+            "v1/evaluations/compare",
+            request,
+            cancellationToken);
+
     private async Task<TResponse> PostJsonAsync<TRequest, TResponse>(
         string relativeUrl,
         TRequest body,
