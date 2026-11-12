@@ -52,7 +52,7 @@ El inicio de sesión lo maneja **Supabase Auth**. La API solo verifica el token 
 
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
-| GET | `/api/auth/me` | Usuario autenticado | Devuelve el usuario, si completó MFA y su empresa y rol (`null` si aún no tiene empresa). |
+| GET | `/api/auth/me` | Usuario autenticado | Devuelve `userId`, `email`, `name`, si completó MFA y su empresa y rol. `name` y `company` son `null` hasta que la persona crea o se une a una empresa. |
 | POST | `/api/companies` | Sin empresa aún | Crea la empresa y hace admin al usuario. Body: `{ companyName, yourName }`. |
 | POST | `/api/companies/current/invite-codes` | Admin con MFA | Genera un código de invitación válido 7 días. |
 | POST | `/api/companies/join` | Sin empresa aún (10 intentos / 15 min) | Entra a la empresa con un código, como recruiter. Body: `{ code, yourName }`. |

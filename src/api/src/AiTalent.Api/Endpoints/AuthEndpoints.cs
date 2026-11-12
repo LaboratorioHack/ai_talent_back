@@ -12,12 +12,14 @@ internal static class AuthEndpoints
                 var result = await auth.GetMeAsync(user.ToActor(), ct);
                 return result.ToHttpResult(me => Results.Ok(new MeResponse(
                     me.UserId,
+                    user.FindFirstValue("email"),
+                    me.Name,
                     me.MfaVerified,
                     me.Membership?.ToResponse())));
             })
             .WithName("GetMe")
             .WithSummary("Get the current user")
-            .WithDescription("Returns the signed-in user's id, whether MFA was completed for this session, and their company and role. `company` is null until the user creates or joins a company.")
+            .WithDescription("Returns the signed-in user's id, email, name, whether MFA was completed for this session, and their company and role. `name` comes from the company's staff record, so it is null until the user creates or joins a company. `company` is null until then too.")
             .Produces<MeResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status403Forbidden);
 
