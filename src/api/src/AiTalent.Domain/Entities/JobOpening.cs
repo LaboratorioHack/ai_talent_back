@@ -57,6 +57,11 @@ public sealed class JobOpening
 
     public bool IsDeleted => DeletedAt is not null;
 
+    public bool IsAcceptingApplications(DateTimeOffset now) =>
+        DeletedAt is null
+        && Status == JobOpeningStatus.Open
+        && (ClosingAt is null || ClosingAt > now);
+
     public RoleProfile? CurrentProfile =>
         Profiles.Count == 0 ? null : Profiles.MaxBy(profile => profile.Version);
 

@@ -64,6 +64,9 @@ internal sealed class FakeJobOpeningRepository : IJobOpeningRepository
     public Task<JobOpening?> FindForApplicationAsync(Guid id, CancellationToken ct = default) =>
         Task.FromResult(Vacancies.FirstOrDefault(vacancy => vacancy.Id == id && vacancy.DeletedAt is null));
 
+    public Task<JobOpening?> FindPublicAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult(Vacancies.FirstOrDefault(vacancy => vacancy.Id == id && vacancy.DeletedAt is null));
+
     public Task<bool> IsProfileInUseAsync(Guid roleProfileId, CancellationToken ct = default) =>
         Task.FromResult(UsedProfiles.Contains(roleProfileId));
 
@@ -174,6 +177,9 @@ internal sealed class FakeApplicationRepository : IApplicationRepository
     public Task<ApplicationEntity?> FindByJobAndCandidateAsync(Guid jobOpeningId, Guid candidateId, CancellationToken ct = default) =>
         Task.FromResult(Applications.FirstOrDefault(a =>
             a.JobOpeningId == jobOpeningId && a.CandidateId == candidateId));
+
+    public Task<ApplicationEntity?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult(Applications.FirstOrDefault(a => a.Id == id));
 
     public Task<IReadOnlyList<ApplicationSubmission>> ListByJobOpeningAsync(Guid jobOpeningId, CancellationToken ct = default)
     {

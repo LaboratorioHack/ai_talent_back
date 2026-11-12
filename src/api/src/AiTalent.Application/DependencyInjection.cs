@@ -20,8 +20,10 @@ public static class DependencyInjection
         services.AddScoped<CompanyService>();
         services.AddScoped<StaffService>();
         services.AddScoped<VacancyService>();
+        services.AddScoped<PublicVacancyService>();
         services.AddScoped<CandidateApplicationService>();
         services.AddScoped<ApplicationListService>();
+        services.AddScoped<ApplicationStageService>();
         services.AddScoped<EvaluationService>();
         services.AddScoped<DashboardService>();
         services.TryAddSingleton(TimeProvider.System);
