@@ -1,3 +1,4 @@
+using AiTalent.Application.Abstractions;
 using AiTalent.Application.Common;
 using AiTalent.Application.Features.Staff;
 using AiTalent.Application.Features.Vacancies;
@@ -11,10 +12,11 @@ public class VacancyServiceTests
     private readonly FakeStaffRepository _staff = new();
     private readonly FakeJobOpeningRepository _vacancies = new();
     private readonly FakeAuditLog _audit = new();
+    private readonly FakeVacancyInsights _insights = new();
     private readonly Guid _companyId = Guid.NewGuid();
 
     private VacancyService CreateService() =>
-        new(_vacancies, new StaffAccess(_staff), _audit, new FakeUnitOfWork());
+        new(_vacancies, new StaffAccess(_staff), _audit, new FakeUnitOfWork(), _insights);
 
     private Actor AddMember(Guid? companyId = null, StaffRole role = StaffRole.Recruiter, bool active = true)
     {
@@ -497,5 +499,28 @@ public class VacancyServiceTests
         Assert.Equal("Analista de Datos", search.Value.Items.Single().Title);
         Assert.Single(firstPage.Value!.Items);
         Assert.Equal(2, firstPage.Value.Total);
+    }
+
+    [Fact]
+    public async Task ListAndDetailReturnRealCountsPerVacancy()
+    {
+        var actor = AddMember();
+        var service = CreateService();
+        var cloud = await CreateVacancyAsync(actor, "Ingeniero Cloud");
+        var data = await CreateVacancyAsync(actor, "Analista de Datos");
+        _insights.Facts.Add(TestFacts.Fact(cloud.Vacancy.Id, fulfillment: "MEETS"));
+        _insights.Facts.Add(TestFacts.Fact(cloud.Vacancy.Id, status: "INTERVIEW", fulfillment: "PARTIALLY_MEETS"));
+        _insights.Facts.Add(TestFacts.Fact(data.Vacancy.Id));
+
+        var list = await service.ListAsync(actor, null, null, 1, 20);
+        var detail = await service.GetAsync(actor.UserId, cloud.Vacancy.Id);
+
+        var cloudCounts = list.Value!.CountsFor(cloud.Vacancy.Id);
+        Assert.Equal(2, cloudCounts.Resumes);
+        Assert.Equal(1, cloudCounts.Meets);
+        Assert.Equal(1, cloudCounts.PartiallyMeets);
+        Assert.Equal(1, cloudCounts.Interviews);
+        Assert.Equal(1, list.Value.CountsFor(data.Vacancy.Id).Resumes);
+        Assert.Equal(cloudCounts, detail.Value!.Counts);
     }
 }

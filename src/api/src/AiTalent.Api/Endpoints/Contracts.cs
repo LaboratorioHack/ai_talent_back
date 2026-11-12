@@ -139,3 +139,9 @@ internal sealed record VacancyApplicationResponse(
     string? ProcessingStatus,
     string? ProcessingError,
     DateTimeOffset? ResumeCreatedAt);
+
+internal sealed record RankApplicationsRequest(IReadOnlyList<Guid>? ApplicationIds);
+
+internal sealed record CompareApplicationsRequest(IReadOnlyList<Guid>? ApplicationIds);
+
+internal sealed record EvidenceSearchApiRequest(string? Query, int? Limit);

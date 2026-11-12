@@ -34,6 +34,12 @@ public sealed class Application
 
     public DateTimeOffset UpdatedAt { get; private set; }
 
+    public void ChangeSelectionStatus(ApplicationSelectionStatus status)
+    {
+        SelectionStatus = status;
+        UpdatedAt = DateTimeOffset.UtcNow;
+    }
+
     public bool CanMoveTo(ApplicationSelectionStatus status) =>
         Transitions.TryGetValue(SelectionStatus, out var allowed) && allowed.Contains(status);
 

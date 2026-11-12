@@ -8,8 +8,6 @@ namespace AiTalent.Api.Endpoints;
 
 internal static class VacancyEndpoints
 {
-    private static readonly VacancyCountsResponse ZeroCounts = new(0, 0, 0, 0, 0, 0);
-
     public static IEndpointRouteBuilder MapVacancyEndpoints(this IEndpointRouteBuilder app)
     {
         var vacancies = app.MapGroup("/api/vacancies");
@@ -38,14 +36,14 @@ internal static class VacancyEndpoints
 
                 var result = await service.ListAsync(user.ToActor(), parsedStatus, q, page, pageSize, ct);
                 return result.ToHttpResult(pageResult => Results.Ok(new VacancyPageResponse(
-                    pageResult.Items.Select(ToSummary).ToList(),
+                    pageResult.Items.Select(item => ToSummary(item, pageResult.CountsFor(item.Id))).ToList(),
                     pageResult.Page,
                     pageResult.PageSize,
                     pageResult.Total)));
             })
             .WithName("ListVacancies")
             .WithSummary("List vacancies")
-            .WithDescription("Lists the caller's company vacancies, newest first. Filters: `status` (DRAFT, OPEN, CLOSED), `q` (title or area), and pagination with `page`/`pageSize` (default 1/20, max 100). Counts stay zero until CVs and evaluations exist.")
+            .WithDescription("Lists the caller's company vacancies, newest first. Filters: `status` (DRAFT, OPEN, CLOSED), `q` (title or area), and pagination with `page`/`pageSize` (default 1/20, max 100). `counts` are real: `resumes` counts applications (withdrawn excluded); `meets`, `partiallyMeets` and `doesNotMeet` come from each application's latest completed evaluation, `disqualified` is counted apart, and `interviews` counts applications in the INTERVIEW stage.")
             .Produces<VacancyPageResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden);
@@ -392,7 +390,16 @@ internal static class VacancyEndpoints
         return true;
     }
 
-    private static VacancySummaryResponse ToSummary(JobOpening vacancy) =>
+    private static VacancyCountsResponse ToResponse(VacancyCounts counts) =>
+        new(
+            counts.Resumes,
+            counts.Meets,
+            counts.PartiallyMeets,
+            counts.DoesNotMeet,
+            counts.Disqualified,
+            counts.Interviews);
+
+    private static VacancySummaryResponse ToSummary(JobOpening vacancy, VacancyCounts counts) =>
         new(
             vacancy.Id,
             vacancy.Title,
@@ -401,7 +408,7 @@ internal static class VacancyEndpoints
             vacancy.ClosingAt,
             vacancy.Positions,
             vacancy.CurrentProfile?.Version,
-            ZeroCounts,
+            ToResponse(counts),
             vacancy.CreatedAt,
             vacancy.UpdatedAt);
 
@@ -426,7 +433,7 @@ internal static class VacancyEndpoints
             profile?.WeightTotal ?? 0m,
             detail.ProfileInUse,
             requirements,
-            ZeroCounts,
+            ToResponse(detail.Counts),
             vacancy.CreatedAt,
             vacancy.UpdatedAt);
     }
