@@ -23,7 +23,7 @@ internal static class ApiExtensions
         Enum.TryParse(value, ignoreCase: true, out role) && Enum.IsDefined(role);
 
     public static CompanyResponse ToResponse(this Membership membership) =>
-        new(membership.CompanyId, membership.CompanyName, RoleName(membership.Role));
+        new(membership.CompanyId, membership.CompanyName, membership.Sector, membership.Size, RoleName(membership.Role));
 
     public static IResult ToHttpResult<T>(this Result<T> result, Func<T, IResult> onSuccess)
     {

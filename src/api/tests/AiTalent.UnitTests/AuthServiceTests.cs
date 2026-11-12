@@ -30,7 +30,7 @@ public class AuthServiceTests
     public async Task ActiveMemberReturnsStaffNameCompanyAndRole()
     {
         var userId = Guid.NewGuid();
-        var company = new Company("Acme");
+        var company = new Company("Acme", "Tecnología", "11-50");
         _companies.Add(company);
         _staff.Add(new StaffMember(userId, company.Id, "Jane Doe", StaffRole.Admin));
 
@@ -48,7 +48,7 @@ public class AuthServiceTests
     public async Task DeactivatedMemberIsForbidden()
     {
         var userId = Guid.NewGuid();
-        var company = new Company("Acme");
+        var company = new Company("Acme", "Tecnología", "11-50");
         _companies.Add(company);
         var member = new StaffMember(userId, company.Id, "Jane Doe", StaffRole.Recruiter);
         member.SetActive(false);

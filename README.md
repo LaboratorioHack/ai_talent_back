@@ -52,8 +52,8 @@ El inicio de sesión lo maneja **Supabase Auth**. La API solo verifica el token 
 
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
-| GET | `/api/auth/me` | Usuario autenticado | Devuelve `userId`, `email`, `name`, si completó MFA y su empresa y rol. `name` y `company` son `null` hasta que la persona crea o se une a una empresa. |
-| POST | `/api/companies` | Sin empresa aún | Crea la empresa y hace admin al usuario. Body: `{ companyName, yourName }`. |
+| GET | `/api/auth/me` | Usuario autenticado | Devuelve `userId`, `email`, `name`, si completó MFA y su empresa (`id`, `name`, `sector`, `size`, `role`). `name` y `company` son `null` hasta que la persona crea o se une a una empresa. |
+| POST | `/api/companies` | Sin empresa aún | Crea la empresa y hace admin al usuario. Body: `{ companyName, sector, size, yourName }`. `size` debe ser `1-10`, `11-50`, `51-200`, `201-500`, `501-1000` o `1000+`. |
 | POST | `/api/companies/current/invite-codes` | Admin con MFA | Genera un código de invitación válido 7 días. |
 | POST | `/api/companies/join` | Sin empresa aún (10 intentos / 15 min) | Entra a la empresa con un código, como recruiter. Body: `{ code, yourName }`. |
 | GET | `/api/staff` | Admin con MFA | Lista el personal de la empresa. |
@@ -66,7 +66,7 @@ Documentación interactiva: `http://localhost:5022/scalar/v1` (solo en Developme
 1. Ops crea la cuenta con `scripts/provision-user.sh` (el registro público está cerrado).
 2. La persona inicia sesión en Supabase y obtiene un token.
 3. `GET /api/auth/me` devuelve `company: null`, así que la app pide crear o unirse a una empresa.
-4. `POST /api/companies` la crea y la persona queda como **admin**.
+4. `POST /api/companies` con `{ companyName, sector, size, yourName }` la crea y la persona queda como **admin**.
 5. Para usar acciones de admin, debe activar MFA (TOTP) en Supabase. Sin MFA, la API responde 403.
 
 ### Flujo: sumar personal con código de invitación

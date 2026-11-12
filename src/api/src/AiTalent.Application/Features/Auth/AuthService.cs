@@ -26,7 +26,7 @@ public sealed class AuthService(IStaffRepository staff, ICompanyRepository compa
             return Result<Me>.Failure(ErrorKind.NotFound, "Company not found.");
         }
 
-        var membership = new Membership(company.Id, company.Name, member.Role);
+        var membership = new Membership(company.Id, company.Name, company.Sector, company.Size, member.Role);
         return Result<Me>.Success(new Me(actor.UserId, member.Name, actor.MfaVerified, membership));
     }
 }

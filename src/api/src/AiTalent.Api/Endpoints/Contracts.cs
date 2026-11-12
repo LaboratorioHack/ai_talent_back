@@ -1,12 +1,12 @@
 namespace AiTalent.Api.Endpoints;
 
-internal sealed record CreateCompanyRequest(string? CompanyName, string? YourName);
+internal sealed record CreateCompanyRequest(string? CompanyName, string? Sector, string? Size, string? YourName);
 
 internal sealed record JoinCompanyRequest(string? Code, string? YourName);
 
 internal sealed record UpdateStaffRequest(string? Role, bool? Active);
 
-internal sealed record CompanyResponse(Guid Id, string Name, string Role);
+internal sealed record CompanyResponse(Guid Id, string Name, string? Sector, string? Size, string Role);
 
 internal sealed record InviteCodeResponse(string Code, DateTimeOffset ExpiresAt);
 
