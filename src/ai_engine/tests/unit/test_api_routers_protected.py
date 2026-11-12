@@ -1,7 +1,7 @@
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
-from ai_engine.api.routers import cvs, evaluations, rag
+from ai_engine.api.routers import cvs, evaluations, rag, role_profiles
 from ai_engine.core.config import Settings, get_settings
 from ai_engine.core.security import require_internal_api_key
 
@@ -12,6 +12,7 @@ def _app() -> FastAPI:
     app.include_router(cvs.router, dependencies=protected)
     app.include_router(evaluations.router, dependencies=protected)
     app.include_router(rag.router, dependencies=protected)
+    app.include_router(role_profiles.router, dependencies=protected)
     app.dependency_overrides[get_settings] = lambda: Settings(engine_api_key="k")
     return app
 
@@ -45,4 +46,13 @@ def test_business_routes_require_api_key() -> None:
     assert (
         client.post("/v1/evaluations/compare", json=compare_body, headers=headers).status_code
         != 401
+    )
+    assert client.post("/v1/role-profiles/propose", json={}).status_code == 401
+    assert client.post("/v1/role-profiles/equivalences", json={}).status_code == 401
+    # Authorized but invalid body: validation runs, so the key was accepted.
+    assert (
+        client.post(
+            "/v1/role-profiles/propose", json={"description": "x"}, headers=headers
+        ).status_code
+        == 422
     )

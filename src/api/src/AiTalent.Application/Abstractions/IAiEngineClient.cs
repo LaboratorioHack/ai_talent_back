@@ -24,4 +24,12 @@ public interface IAiEngineClient
     Task<CompareCandidatesResponse> CompareAsync(
         CompareCandidatesRequest request,
         CancellationToken cancellationToken = default);
+
+    Task<ProposeRequirementsResponse> ProposeRequirementsAsync(
+        ProposeRequirementsRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<SuggestEquivalencesResponse> SuggestEquivalencesAsync(
+        SuggestEquivalencesRequest request,
+        CancellationToken cancellationToken = default);
 }

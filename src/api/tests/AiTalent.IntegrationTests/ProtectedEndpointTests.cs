@@ -27,6 +27,8 @@ public class ProtectedEndpointTests(TestApiFactory factory) : IClassFixture<Test
     [InlineData("POST", "/api/vacancies/00000000-0000-0000-0000-000000000001/applications/00000000-0000-0000-0000-000000000002/evidence")]
     [InlineData("GET", "/api/dashboard")]
     [InlineData("GET", "/api/notifications")]
+    [InlineData("POST", "/api/role-profiles/propose")]
+    [InlineData("POST", "/api/role-profiles/equivalences")]
     public async Task EndpointsRejectRequestsWithoutToken(string method, string path)
     {
         using var client = factory.CreateClient();

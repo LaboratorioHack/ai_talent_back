@@ -190,6 +190,38 @@ public class AiEngineClientTests
         Assert.Contains("/v1/evaluations/compare", handler.LastRequestUri ?? "");
     }
 
+    [Fact]
+    public async Task ProposeRequirementsAsync_PostsToRoleProfilesAndReadsEquivalences()
+    {
+        var handler = new StubHandler(
+            """
+            {
+              "requirements": [
+                {
+                  "description": "Unity",
+                  "type": "MANDATORY",
+                  "weight": 60,
+                  "equivalences": [{ "label": "Unreal Engine", "percent": 70 }]
+                }
+              ]
+            }
+            """);
+        var client = CreateClient(handler);
+
+        var result = await client.ProposeRequirementsAsync(
+            new ProposeRequirementsRequest(
+                "Desarrollador de videojuegos con Unity",
+                "Game Developer",
+                null,
+                [new ExistingRequirementDto("C#", "MANDATORY", 10)]));
+
+        var requirement = Assert.Single(result.Requirements);
+        Assert.Equal(60, requirement.Weight);
+        Assert.Equal(70, Assert.Single(requirement.Equivalences).Percent);
+        Assert.Contains("/v1/role-profiles/propose", handler.LastRequestUri ?? "");
+        Assert.Contains("\"existing\"", handler.LastRequestBody);
+    }
+
     private static AiEngineClient CreateClient(HttpMessageHandler handler)
     {
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:8000/") };
