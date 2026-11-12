@@ -16,15 +16,24 @@ public sealed record RequirementInput(
 
 public sealed record ProfileInput(string? Description, IReadOnlyList<RequirementInput>? Requirements);
 
-public sealed record VacancyPage(IReadOnlyList<JobOpening> Items, int Page, int PageSize, int Total);
+public sealed record VacancyPage(
+    IReadOnlyList<JobOpening> Items,
+    int Page,
+    int PageSize,
+    int Total,
+    IReadOnlyDictionary<Guid, VacancyCounts> Counts)
+{
+    public VacancyCounts CountsFor(Guid vacancyId) => Counts.GetValueOrDefault(vacancyId) ?? VacancyCounts.Zero;
+}
 
-public sealed record VacancyDetail(JobOpening Vacancy, bool ProfileInUse);
+public sealed record VacancyDetail(JobOpening Vacancy, bool ProfileInUse, VacancyCounts Counts);
 
 public sealed class VacancyService(
     IJobOpeningRepository vacancies,
     StaffAccess access,
     IAuditLog audit,
-    IUnitOfWork unitOfWork)
+    IUnitOfWork unitOfWork,
+    IVacancyInsights insights)
 {
     private const decimal RequiredWeightTotal = 100m;
 
@@ -54,8 +63,10 @@ public sealed class VacancyService(
             currentPageSize,
             ct);
         var total = await vacancies.CountByCompanyAsync(companyId, status, search, ct);
+        var facts = await insights.ListApplicationFactsAsync(companyId, items.Select(item => item.Id).ToList(), ct);
 
-        return Result<VacancyPage>.Success(new VacancyPage(items, currentPage, currentPageSize, total));
+        return Result<VacancyPage>.Success(
+            new VacancyPage(items, currentPage, currentPageSize, total, VacancyCounts.ByVacancy(facts)));
     }
 
     public async Task<Result<VacancyDetail>> GetAsync(Guid actorUserId, Guid id, CancellationToken ct = default)
@@ -352,7 +363,8 @@ public sealed class VacancyService(
     {
         var profile = vacancy.CurrentProfile;
         var inUse = profile is not null && await vacancies.IsProfileInUseAsync(profile.Id, ct);
-        return new VacancyDetail(vacancy, inUse);
+        var facts = await insights.ListApplicationFactsAsync(vacancy.CompanyId, [vacancy.Id], ct);
+        return new VacancyDetail(vacancy, inUse, VacancyCounts.From(facts));
     }
 
     private static string? ValidateMetadata(

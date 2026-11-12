@@ -117,6 +117,8 @@ app.MapAuthEndpoints();
 app.MapCompanyEndpoints();
 app.MapStaffEndpoints();
 app.MapVacancyEndpoints();
+app.MapEvaluationEndpoints();
+app.MapDashboardEndpoints();
 
 await app.RunAsync();
 
