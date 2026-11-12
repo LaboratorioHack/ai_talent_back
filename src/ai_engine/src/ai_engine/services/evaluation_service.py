@@ -412,9 +412,7 @@ class EvaluationService:
             if resume is None:
                 raise ValueError(f"Resume {resume_id} not found")
 
-            latest = await repositories.get_latest_evaluation(
-                request.role_profile_id, resume_id
-            )
+            latest = await repositories.get_latest_evaluation(request.role_profile_id, resume_id)
             if latest is None:
                 evaluated = await self.evaluate(
                     EvaluateRequest(
@@ -424,9 +422,7 @@ class EvaluationService:
                         job_opening_id=profile.get("job_opening_id"),
                     )
                 )
-                candidates.append(
-                    _bundle_from_evaluate(resume_id, resume, evaluated, req_lookup)
-                )
+                candidates.append(_bundle_from_evaluate(resume_id, resume, evaluated, req_lookup))
             else:
                 results = await repositories.list_requirement_results(latest["id"])
                 candidates.append(_bundle_from_stored(resume_id, resume, latest, results))

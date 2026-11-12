@@ -21,9 +21,7 @@ CRITICAL RULES:
 4. candidate_id MUST be the resume_id string from the input. Do not invent names or identifiers.
 """
 
-_TOOL_DESCRIPTION = (
-    "Comparative trade-off analysis of anonymized candidates against a vacancy."
-)
+_TOOL_DESCRIPTION = "Comparative trade-off analysis of anonymized candidates against a vacancy."
 
 
 class ComparerAgent:

@@ -34,8 +34,6 @@ async def test_complete_json_retries_rate_limit(monkeypatch: pytest.MonkeyPatch)
 
     from ai_engine.schemas.cv import StructuredCandidateProfile
 
-    profile = await client.complete_json(
-        "sys", "cv", StructuredCandidateProfile, max_tokens=2048
-    )
+    profile = await client.complete_json("sys", "cv", StructuredCandidateProfile, max_tokens=2048)
     assert profile.summary == "Engineer"
     assert client._client.messages.create.await_count == 2

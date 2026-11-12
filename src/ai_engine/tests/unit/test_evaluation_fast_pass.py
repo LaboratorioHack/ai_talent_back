@@ -99,9 +99,7 @@ async def test_disqualify_skips_claude(monkeypatch: pytest.MonkeyPatch) -> None:
     service = _claude_service()
     key = f"req_{_REQ_DIS.hex}"
     service._jev.screen = AsyncMock(  # type: ignore[method-assign]
-        return_value=JevScreenResult(
-            used=True, model="typesafe/jev-1.14", noul_by_key={key: 0.91}
-        )
+        return_value=JevScreenResult(used=True, model="typesafe/jev-1.14", noul_by_key={key: 0.91})
     )
 
     result = await service.evaluate(_request())
@@ -122,9 +120,7 @@ async def test_mandatory_noul_low_skips_claude(monkeypatch: pytest.MonkeyPatch) 
     service = _claude_service()
     key = f"req_{_REQ_MAN.hex}"
     service._jev.screen = AsyncMock(  # type: ignore[method-assign]
-        return_value=JevScreenResult(
-            used=True, model="typesafe/jev-1.14", noul_by_key={key: 0.1}
-        )
+        return_value=JevScreenResult(used=True, model="typesafe/jev-1.14", noul_by_key={key: 0.1})
     )
 
     result = await service.evaluate(_request())
@@ -141,9 +137,7 @@ async def test_uncertain_noul_still_calls_claude(monkeypatch: pytest.MonkeyPatch
     service = _claude_service()
     key = f"req_{_REQ_MAN.hex}"
     service._jev.screen = AsyncMock(  # type: ignore[method-assign]
-        return_value=JevScreenResult(
-            used=True, model="typesafe/jev-1.14", noul_by_key={key: 0.5}
-        )
+        return_value=JevScreenResult(used=True, model="typesafe/jev-1.14", noul_by_key={key: 0.5})
     )
 
     result = await service.evaluate(_request())

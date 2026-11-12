@@ -57,9 +57,7 @@ async def upsert_candidate(company_id: uuid.UUID, name: str, contact_email: str)
         return result["id"]
 
 
-async def get_resume_by_file_hash(
-    company_id: uuid.UUID, file_hash: str
-) -> dict[str, Any] | None:
+async def get_resume_by_file_hash(company_id: uuid.UUID, file_hash: str) -> dict[str, Any] | None:
     async with connection() as conn:
         row = await conn.execute(
             """
@@ -293,8 +291,7 @@ async def bulk_prepare_seed_rows(
             (candidate_ids,),
         )
         next_version: dict[uuid.UUID, int] = {
-            row["candidate_id"]: int(row["max_version"]) + 1
-            for row in await version_cur.fetchall()
+            row["candidate_id"]: int(row["max_version"]) + 1 for row in await version_cur.fetchall()
         }
 
         prepared: list[dict[str, Any]] = []
@@ -305,9 +302,7 @@ async def bulk_prepare_seed_rows(
             candidate_id = candidate_by_email[email]
             existing = existing_by_hash.get(file_hash)
             skipped = bool(
-                existing
-                and existing.get("processing_status") == "PROCESSED"
-                and not force
+                existing and existing.get("processing_status") == "PROCESSED" and not force
             )
             if existing:
                 resume_id = existing["id"]
@@ -315,9 +310,7 @@ async def bulk_prepare_seed_rows(
                 resume_id = uuid.uuid4()
                 version = next_version.get(candidate_id, 1)
                 next_version[candidate_id] = version + 1
-                new_resumes.append(
-                    (resume_id, candidate_id, version, row["file_key"], file_hash)
-                )
+                new_resumes.append((resume_id, candidate_id, version, row["file_key"], file_hash))
             prepared.append(
                 {
                     **row,

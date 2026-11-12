@@ -100,9 +100,7 @@ class IngestService:
 
         profile, batch = await asyncio.gather(
             extract_profile(anonymized, self._llm, sanitization=sanitization),
-            self._embeddings.embed_texts(texts)
-            if texts
-            else _empty_batch(),
+            self._embeddings.embed_texts(texts) if texts else _empty_batch(),
         )
         profile.parser_strategy = parser_strategy
         profile.ocr_confidence = ocr_confidence

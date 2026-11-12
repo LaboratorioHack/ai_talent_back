@@ -39,9 +39,9 @@ def test_hard_fail_keys() -> None:
     assert hard_fail_keys(
         questions, {"d": 0.91, "m": 0.7}, yes_threshold=0.8, no_threshold=0.2
     ) == {"d"}
-    assert hard_fail_keys(
-        questions, {"d": 0.1, "m": 0.1}, yes_threshold=0.8, no_threshold=0.2
-    ) == {"m"}
+    assert hard_fail_keys(questions, {"d": 0.1, "m": 0.1}, yes_threshold=0.8, no_threshold=0.2) == {
+        "m"
+    }
     assert (
         hard_fail_keys(questions, {"d": 0.5, "m": 0.5}, yes_threshold=0.8, no_threshold=0.2)
         == set()

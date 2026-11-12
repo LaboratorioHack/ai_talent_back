@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text;
-using AiTalent.Infrastructure.AiEngine;
 using AiTalent.Application.Abstractions.AiEngine;
+using AiTalent.Infrastructure.AiEngine;
 namespace AiTalent.UnitTests;
 
 public class AiEngineClientTests
