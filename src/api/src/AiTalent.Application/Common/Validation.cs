@@ -13,6 +13,7 @@ internal static class Validation
     public const int MaxRequirementConditionLength = 200;
     public const int MaxEquivalenceNameLength = 80;
     public const int MaxPositions = 1000;
+    public const int MaxStageReasonLength = 500;
 
     /// <summary>Canonical organization sizes accepted by the API and enforced by a DB check constraint.</summary>
     public static readonly IReadOnlyList<string> CompanySizes =

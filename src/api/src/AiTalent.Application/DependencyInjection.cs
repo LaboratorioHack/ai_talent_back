@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<PublicVacancyService>();
         services.AddScoped<CandidateApplicationService>();
         services.AddScoped<ApplicationListService>();
+        services.AddScoped<ApplicationStageService>();
         return services;
     }
 }

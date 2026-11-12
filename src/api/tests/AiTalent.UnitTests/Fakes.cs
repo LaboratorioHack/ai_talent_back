@@ -178,6 +178,9 @@ internal sealed class FakeApplicationRepository : IApplicationRepository
         Task.FromResult(Applications.FirstOrDefault(a =>
             a.JobOpeningId == jobOpeningId && a.CandidateId == candidateId));
 
+    public Task<ApplicationEntity?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult(Applications.FirstOrDefault(a => a.Id == id));
+
     public Task<IReadOnlyList<ApplicationSubmission>> ListByJobOpeningAsync(Guid jobOpeningId, CancellationToken ct = default)
     {
         var rows = Applications

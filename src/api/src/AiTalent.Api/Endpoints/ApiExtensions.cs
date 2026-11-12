@@ -27,6 +27,9 @@ internal static class ApiExtensions
     public static bool TryParseVacancyStatus(string value, out JobOpeningStatus status) =>
         Enum.TryParse(value, ignoreCase: true, out status) && Enum.IsDefined(status);
 
+    public static bool TryParseApplicationStatus(string value, out ApplicationSelectionStatus status) =>
+        Enum.TryParse(value, ignoreCase: true, out status) && Enum.IsDefined(status);
+
     public static bool TryParseRequirementType(string value, out RequirementType type) =>
         Enum.TryParse(value, ignoreCase: true, out type) && Enum.IsDefined(type);
 

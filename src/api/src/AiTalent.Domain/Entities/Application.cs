@@ -34,9 +34,40 @@ public sealed class Application
 
     public DateTimeOffset UpdatedAt { get; private set; }
 
-    public void ChangeSelectionStatus(ApplicationSelectionStatus status)
+    public bool CanMoveTo(ApplicationSelectionStatus status) =>
+        Transitions.TryGetValue(SelectionStatus, out var allowed) && allowed.Contains(status);
+
+    public bool MoveTo(ApplicationSelectionStatus status)
     {
+        if (!CanMoveTo(status))
+        {
+            return false;
+        }
+
         SelectionStatus = status;
         UpdatedAt = DateTimeOffset.UtcNow;
+        return true;
     }
+
+    private static readonly Dictionary<ApplicationSelectionStatus, ApplicationSelectionStatus[]> Transitions = new()
+    {
+        [ApplicationSelectionStatus.Applied] =
+        [
+            ApplicationSelectionStatus.Shortlisted,
+            ApplicationSelectionStatus.Rejected,
+            ApplicationSelectionStatus.Withdrawn,
+        ],
+        [ApplicationSelectionStatus.Shortlisted] =
+        [
+            ApplicationSelectionStatus.Interview,
+            ApplicationSelectionStatus.Rejected,
+            ApplicationSelectionStatus.Withdrawn,
+        ],
+        [ApplicationSelectionStatus.Interview] =
+        [
+            ApplicationSelectionStatus.Hired,
+            ApplicationSelectionStatus.Rejected,
+            ApplicationSelectionStatus.Withdrawn,
+        ],
+    };
 }

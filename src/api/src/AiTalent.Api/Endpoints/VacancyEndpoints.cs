@@ -246,6 +246,44 @@ internal static class VacancyEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        vacancies.MapPatch("{id:guid}/applications/{applicationId:guid}", async (
+                Guid id,
+                Guid applicationId,
+                ChangeApplicationStatusRequest request,
+                ClaimsPrincipal user,
+                ApplicationStageService service,
+                CancellationToken ct) =>
+            {
+                if (request.Status is null || !ApiExtensions.TryParseApplicationStatus(request.Status, out var status))
+                {
+                    return Results.Problem(
+                        detail: "Status must be APPLIED, SHORTLISTED, INTERVIEW, REJECTED, HIRED or WITHDRAWN.",
+                        statusCode: StatusCodes.Status400BadRequest);
+                }
+
+                var result = await service.ChangeStatusAsync(
+                    user.ToUserId(),
+                    id,
+                    applicationId,
+                    status,
+                    request.Reason,
+                    ct);
+                return result.ToHttpResult(application => Results.Ok(new ApplicationStageResponse(
+                    application.Id,
+                    id,
+                    application.CandidateId,
+                    application.SelectionStatus.ToString().ToUpperInvariant(),
+                    application.UpdatedAt)));
+            })
+            .WithName("ChangeApplicationStatus")
+            .WithSummary("Move an application to another stage")
+            .WithDescription("Moves an application through the selection pipeline. The pipeline is APPLIED → SHORTLISTED → INTERVIEW → HIRED, and REJECTED or WITHDRAWN can be set from any open stage (APPLIED, SHORTLISTED, INTERVIEW). REJECTED, HIRED and WITHDRAWN are terminal. Same-stage or skipped moves return 409. An optional `reason` (max 500 characters) is stored in the audit log. Company-scoped.")
+            .Produces<ApplicationStageResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
+
         vacancies.MapPost("{id:guid}/applications", async (
                 Guid id,
                 HttpRequest request,
