@@ -91,3 +91,26 @@ internal sealed record RequirementRequest(
     string? Condition,
     decimal? Weight,
     IReadOnlyDictionary<string, int>? Equivalences);
+
+internal sealed record CandidateApplicationResponse(
+    Guid ApplicationId,
+    Guid CandidateId,
+    Guid ResumeId,
+    string Status,
+    bool DuplicateContent,
+    string Message);
+
+internal sealed record VacancyApplicationResponse(
+    Guid ApplicationId,
+    Guid CandidateId,
+    string CandidateName,
+    string CandidateEmail,
+    string Source,
+    string SelectionStatus,
+    DateTimeOffset AppliedAt,
+    DateTimeOffset UpdatedAt,
+    Guid? ResumeId,
+    int? ResumeVersion,
+    string? ProcessingStatus,
+    string? ProcessingError,
+    DateTimeOffset? ResumeCreatedAt);

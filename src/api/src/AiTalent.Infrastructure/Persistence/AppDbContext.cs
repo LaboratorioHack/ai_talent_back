@@ -18,6 +18,12 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     public DbSet<Requirement> Requirements => Set<Requirement>();
 
+    public DbSet<Candidate> Candidates => Set<Candidate>();
+
+    public DbSet<Resume> Resumes => Set<Resume>();
+
+    public DbSet<Domain.Entities.Application> Applications => Set<Domain.Entities.Application>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasPostgresExtension("vector");
