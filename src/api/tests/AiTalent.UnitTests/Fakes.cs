@@ -257,15 +257,85 @@ internal sealed class FakeAiEngineClient : IAiEngineClient
             null));
     }
 
-    public Task<CandidateEvaluationResponse> EvaluateAsync(EvaluateCandidateRequest request, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
+    public Exception? ThrowOnEvaluate { get; set; }
+    public List<EvaluateCandidateRequest> EvaluateRequests { get; } = [];
+    public List<RankCandidatesRequest> RankRequests { get; } = [];
+    public List<CompareCandidatesRequest> CompareRequests { get; } = [];
+    public List<EvidenceSearchRequest> EvidenceRequests { get; } = [];
 
-    public Task<RankCandidatesResponse> RankCandidatesAsync(RankCandidatesRequest request, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
+    /// <summary>Resume ids the fake engine skips when ranking (as if their evaluation failed).</summary>
+    public HashSet<Guid> UnrankableResumes { get; } = [];
 
-    public Task<EvidenceSearchResponse> SearchEvidenceAsync(EvidenceSearchRequest request, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
+    public Func<Guid, float> ScoreOf { get; set; } = _ => 70f;
 
-    public Task<CompareCandidatesResponse> CompareAsync(CompareCandidatesRequest request, CancellationToken cancellationToken = default) =>
-        throw new NotImplementedException();
+    public Task<CandidateEvaluationResponse> EvaluateAsync(EvaluateCandidateRequest request, CancellationToken cancellationToken = default)
+    {
+        EvaluateRequests.Add(request);
+        if (ThrowOnEvaluate is not null)
+        {
+            throw ThrowOnEvaluate;
+        }
+
+        return Task.FromResult(new CandidateEvaluationResponse(
+            Guid.NewGuid(),
+            ScoreOf(request.ResumeId),
+            "MEETS",
+            0.9f,
+            true,
+            false,
+            [],
+            [],
+            [],
+            "fake-model",
+            "v1",
+            "Looks good."));
+    }
+
+    public Task<RankCandidatesResponse> RankCandidatesAsync(RankCandidatesRequest request, CancellationToken cancellationToken = default)
+    {
+        RankRequests.Add(request);
+        if (ThrowOnEvaluate is not null)
+        {
+            throw ThrowOnEvaluate;
+        }
+
+        var ranked = request.ResumeIds
+            .Where(id => !UnrankableResumes.Contains(id))
+            .Select(id => new RankedCandidateDto(id, Guid.NewGuid(), ScoreOf(id), 0.8f, "MEETS", true))
+            .OrderByDescending(row => row.TotalScore)
+            .ToList();
+        return Task.FromResult(new RankCandidatesResponse(request.RoleProfileId, ranked));
+    }
+
+    public Task<EvidenceSearchResponse> SearchEvidenceAsync(EvidenceSearchRequest request, CancellationToken cancellationToken = default)
+    {
+        EvidenceRequests.Add(request);
+        return Task.FromResult(new EvidenceSearchResponse(
+            request.ResumeId,
+            request.Query,
+            [new EvidenceChunkDto(Guid.NewGuid(), "Experience", "5 years with Azure", 1, 0.9f)]));
+    }
+
+    public Task<CompareCandidatesResponse> CompareAsync(CompareCandidatesRequest request, CancellationToken cancellationToken = default)
+    {
+        CompareRequests.Add(request);
+        return Task.FromResult(new CompareCandidatesResponse(
+            request.RoleProfileId,
+            "Both are strong.",
+            request.ResumeIds.Select(id => new SideBySideCandidateDto(id.ToString(), "Cloud", "English", "Platform")).ToList(),
+            "Depth versus breadth.",
+            []));
+    }
+}
+
+internal sealed class FakeVacancyInsights : IVacancyInsights
+{
+    public List<ApplicationFact> Facts { get; } = [];
+
+    public Task<IReadOnlyList<ApplicationFact>> ListApplicationFactsAsync(
+        Guid companyId,
+        IReadOnlyCollection<Guid> vacancyIds,
+        CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<ApplicationFact>>(
+            Facts.Where(fact => vacancyIds.Contains(fact.JobOpeningId)).ToList());
 }
