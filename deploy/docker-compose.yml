@@ -17,7 +17,8 @@ services:
     restart: unless-stopped
     ports: ["80:80", "443:443"]
     environment:
-      DOMAIN: ${DOMAIN}
+      DOMAIN: ${DOMAIN}                          # landing (criba.isroot.in)
+      APP_DOMAIN: ${APP_DOMAIN:-app.${DOMAIN}}   # app + API (app.criba.isroot.in)
     cap_drop: [ALL]
     cap_add: [NET_BIND_SERVICE]
     security_opt: ["no-new-privileges:true"]
