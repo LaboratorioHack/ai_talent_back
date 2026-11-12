@@ -133,6 +133,18 @@ En el proyecto hospedado hay que desactivar también **Authentication → Sign I
 
 La API no arranca si falta `SUPABASE_URL` (fuera de Development) o `INVITES__SIGNINGKEY`.
 
+### Email (SMTP)
+
+La API envía correos con `IEmailSender` (`SmtpEmailSender`, MailKit). Por defecto usa Gmail (`smtp.gmail.com:587`, STARTTLS) con la cuenta `cribaai984@gmail.com`.
+
+| Variable | Notas |
+|---|---|
+| `Smtp__Username` / `Smtp__FromAddress` | Cuenta que envía. `FromAddress` usa `Username` si está vacío. |
+| `Smtp__Password` | **App Password** de Gmail (requiere verificación en 2 pasos): https://myaccount.google.com/apppasswords. Nunca la contraseña de la cuenta. |
+| `Smtp__Host` / `Smtp__Port` / `Smtp__FromName` | Opcionales: `smtp.gmail.com`, `587`, `Criba AI`. |
+
+Si faltan credenciales la API arranca igual, pero `SendAsync` lanza `InvalidOperationException`.
+
 ## CI/CD (sin redundancia)
 
 | Evento | Workflow | Hace | No hace |
