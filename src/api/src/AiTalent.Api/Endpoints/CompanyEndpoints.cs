@@ -10,11 +10,11 @@ internal static class CompanyEndpoints
         var companies = app.MapGroup("/api/companies");
 
         companies.MapPost("", async (CreateCompanyRequest request, ClaimsPrincipal user, CompanyService service, CancellationToken ct) =>
-                (await service.CreateAsync(user.ToUserId(), request.CompanyName, request.YourName, ct))
+                (await service.CreateAsync(user.ToUserId(), request.CompanyName, request.Sector, request.Size, request.YourName, ct))
                 .ToHttpResult(membership => Results.Created($"/api/companies/{membership.CompanyId}", membership.ToResponse())))
             .WithName("CreateCompany")
             .WithSummary("Create a company")
-            .WithDescription("Creates a company and makes the signed-in user its admin. Only works for users who don't belong to a company yet. `companyName` and `yourName` are required, up to 120 characters each.")
+            .WithDescription("Creates a company and makes the signed-in user its admin. Only works for users who don't belong to a company yet. `companyName` and `yourName` are required, up to 120 characters each. `sector` is required, 2 to 80 characters. `size` is required and must be one of: 1-10, 11-50, 51-200, 201-500, 501-1000, 1000+.")
             .Produces<CompanyResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status409Conflict);

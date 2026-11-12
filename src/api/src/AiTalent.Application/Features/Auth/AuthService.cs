@@ -3,7 +3,7 @@ using AiTalent.Application.Common;
 
 namespace AiTalent.Application.Features.Auth;
 
-public sealed record Me(Guid UserId, bool MfaVerified, Membership? Membership);
+public sealed record Me(Guid UserId, string? Name, bool MfaVerified, Membership? Membership);
 
 public sealed class AuthService(IStaffRepository staff, ICompanyRepository companies)
 {
@@ -12,7 +12,7 @@ public sealed class AuthService(IStaffRepository staff, ICompanyRepository compa
         var member = await staff.FindByUserIdAsync(actor.UserId, ct);
         if (member is null)
         {
-            return Result<Me>.Success(new Me(actor.UserId, actor.MfaVerified, null));
+            return Result<Me>.Success(new Me(actor.UserId, null, actor.MfaVerified, null));
         }
 
         if (!member.Active)
@@ -26,7 +26,7 @@ public sealed class AuthService(IStaffRepository staff, ICompanyRepository compa
             return Result<Me>.Failure(ErrorKind.NotFound, "Company not found.");
         }
 
-        var membership = new Membership(company.Id, company.Name, member.Role);
-        return Result<Me>.Success(new Me(actor.UserId, actor.MfaVerified, membership));
+        var membership = new Membership(company.Id, company.Name, company.Sector, company.Size, member.Role);
+        return Result<Me>.Success(new Me(actor.UserId, member.Name, actor.MfaVerified, membership));
     }
 }

@@ -12,6 +12,8 @@ internal sealed class CompanyConfiguration : IEntityTypeConfiguration<Company>
         builder.HasKey(c => c.Id);
         builder.Property(c => c.Id).HasColumnName("id").ValueGeneratedNever();
         builder.Property(c => c.Name).HasColumnName("name");
+        builder.Property(c => c.Sector).HasColumnName("sector");
+        builder.Property(c => c.Size).HasColumnName("size");
         builder.Property(c => c.CreatedAt).HasColumnName("created_at");
     }
 }

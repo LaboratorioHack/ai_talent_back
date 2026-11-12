@@ -1,4 +1,9 @@
-{$DOMAIN} {
+# Two sites, one certificate each (Caddy issues them automatically):
+#   {$DOMAIN}      -> public landing (Astro, built into the web image under /landing)
+#   {$APP_DOMAIN}  -> the app (Next.js) + the API under /api
+# Both DNS A records must point to this EC2.
+
+(common) {
 	encode zstd gzip
 
 	# OWASP A02/A04: headers common to every response, set once at the edge.
@@ -10,6 +15,29 @@
 		-Server
 		-X-Powered-By
 	}
+}
+
+{$DOMAIN} {
+	import common
+
+	# "/" is the landing page; its assets live under /landing (Astro `base`).
+	handle / {
+		rewrite * /landing/index.html
+		reverse_proxy web:3000
+	}
+
+	handle /landing/* {
+		reverse_proxy web:3000
+	}
+
+	# Anything else belongs to the app: keep path and query (e.g. /login -> app/login).
+	handle {
+		redir https://{$APP_DOMAIN}{uri} 308
+	}
+}
+
+{$APP_DOMAIN} {
+	import common
 
 	handle /api/* {
 		# Bound uploads (CVs <= 10 MiB) before they reach the API.

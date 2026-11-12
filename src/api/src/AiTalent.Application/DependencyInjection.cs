@@ -1,6 +1,7 @@
 using AiTalent.Application.Features.Auth;
 using AiTalent.Application.Features.Companies;
 using AiTalent.Application.Features.Staff;
+using AiTalent.Application.Features.Vacancies;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace AiTalent.Application;
@@ -12,9 +13,9 @@ public static class DependencyInjection
         // Registrar aquí los handlers de cada Feature (Features/<Feature>/...).
         services.AddScoped<StaffAccess>();
         services.AddScoped<AuthService>();
-        services.AddScoped<SignUpService>();
         services.AddScoped<CompanyService>();
         services.AddScoped<StaffService>();
+        services.AddScoped<VacancyService>();
         return services;
     }
 }

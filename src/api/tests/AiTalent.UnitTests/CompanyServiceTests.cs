@@ -19,7 +19,7 @@ public class CompanyServiceTests
     [Fact]
     public async Task SimultaneousCreateFromSameUserReportsConflict()
     {
-        var result = await CreateService(duplicateKey: true).CreateAsync(Guid.NewGuid(), "Acme", "Jane Doe");
+        var result = await CreateService(duplicateKey: true).CreateAsync(Guid.NewGuid(), "Acme", "Tecnología", "11-50", "Jane Doe");
 
         Assert.Equal(ErrorKind.Conflict, result.Error!.Kind);
         Assert.Empty(_audit.Actions);
@@ -30,7 +30,7 @@ public class CompanyServiceTests
     {
         var userId = Guid.NewGuid();
 
-        var result = await CreateService().CreateAsync(userId, "Acme", "Jane Doe");
+        var result = await CreateService().CreateAsync(userId, "Acme", "Tecnología", "11-50", "Jane Doe");
 
         Assert.True(result.IsSuccess);
         Assert.Equal(StaffRole.Admin, result.Value!.Role);
@@ -43,9 +43,9 @@ public class CompanyServiceTests
     {
         var userId = Guid.NewGuid();
         var service = CreateService();
-        await service.CreateAsync(userId, "Acme", "Jane Doe");
+        await service.CreateAsync(userId, "Acme", "Tecnología", "11-50", "Jane Doe");
 
-        var result = await service.CreateAsync(userId, "Other", "Jane Doe");
+        var result = await service.CreateAsync(userId, "Other", "Tecnología", "11-50", "Jane Doe");
 
         Assert.Equal(ErrorKind.Conflict, result.Error!.Kind);
         Assert.Single(_companies.Companies);
@@ -56,7 +56,7 @@ public class CompanyServiceTests
     {
         var admin = Guid.NewGuid();
         var service = CreateService();
-        var created = await service.CreateAsync(admin, "Acme", "Jane Doe");
+        var created = await service.CreateAsync(admin, "Acme", "Tecnología", "11-50", "Jane Doe");
         var invite = await service.CreateInviteCodeAsync(new Actor(admin, MfaVerified: true));
 
         var joined = await service.JoinAsync(Guid.NewGuid(), invite.Value!.Code, "John Roe");
@@ -81,7 +81,7 @@ public class CompanyServiceTests
         var admin = Guid.NewGuid();
         var recruiter = Guid.NewGuid();
         var service = CreateService();
-        await service.CreateAsync(admin, "Acme", "Jane Doe");
+        await service.CreateAsync(admin, "Acme", "Tecnología", "11-50", "Jane Doe");
         var invite = await service.CreateInviteCodeAsync(new Actor(admin, MfaVerified: true));
         await service.JoinAsync(recruiter, invite.Value!.Code, "John Roe");
 
@@ -95,7 +95,7 @@ public class CompanyServiceTests
     {
         var admin = Guid.NewGuid();
         var service = CreateService();
-        await service.CreateAsync(admin, "Acme", "Jane Doe");
+        await service.CreateAsync(admin, "Acme", "Tecnología", "11-50", "Jane Doe");
 
         var result = await service.CreateInviteCodeAsync(new Actor(admin, MfaVerified: false));
 
@@ -103,11 +103,54 @@ public class CompanyServiceTests
     }
 
     [Fact]
+    public async Task CreatingCompanyStoresSectorAndSize()
+    {
+        var userId = Guid.NewGuid();
+
+        var result = await CreateService().CreateAsync(userId, " Acme ", " Tecnología ", " 11-50 ", "Jane Doe");
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Tecnología", result.Value!.Sector);
+        Assert.Equal("11-50", result.Value.Size);
+        var company = _companies.Companies.Single();
+        Assert.Equal("Acme", company.Name);
+        Assert.Equal("Tecnología", company.Sector);
+        Assert.Equal("11-50", company.Size);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("x")]
+    public async Task InvalidSectorIsRejected(string? sector)
+    {
+        var result = await CreateService().CreateAsync(Guid.NewGuid(), "Acme", sector, "11-50", "Jane Doe");
+
+        Assert.Equal(ErrorKind.Invalid, result.Error!.Kind);
+        Assert.Empty(_companies.Companies);
+        Assert.Empty(_staff.Members);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("11 a 50")]
+    [InlineData("1001+")]
+    public async Task InvalidSizeIsRejected(string? size)
+    {
+        var result = await CreateService().CreateAsync(Guid.NewGuid(), "Acme", "Tecnología", size, "Jane Doe");
+
+        Assert.Equal(ErrorKind.Invalid, result.Error!.Kind);
+        Assert.Empty(_companies.Companies);
+        Assert.Empty(_staff.Members);
+    }
+
+    [Fact]
     public async Task DeactivatedStaffMemberIsDenied()
     {
         var admin = Guid.NewGuid();
         var service = CreateService();
-        await service.CreateAsync(admin, "Acme", "Jane Doe");
+        await service.CreateAsync(admin, "Acme", "Tecnología", "11-50", "Jane Doe");
         _staff.Members.Single().SetActive(false);
 
         var result = await service.CreateInviteCodeAsync(new Actor(admin, MfaVerified: true));

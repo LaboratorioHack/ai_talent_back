@@ -7,7 +7,6 @@ namespace AiTalent.Api.Endpoints;
 internal static class RateLimitPolicies
 {
     public const string InviteJoin = "invite-join";
-    public const string SignUp = "sign-up";
 }
 
 internal static class ApiExtensions
@@ -23,8 +22,14 @@ internal static class ApiExtensions
     public static bool TryParseRole(string value, out StaffRole role) =>
         Enum.TryParse(value, ignoreCase: true, out role) && Enum.IsDefined(role);
 
+    public static bool TryParseVacancyStatus(string value, out JobOpeningStatus status) =>
+        Enum.TryParse(value, ignoreCase: true, out status) && Enum.IsDefined(status);
+
+    public static bool TryParseRequirementType(string value, out RequirementType type) =>
+        Enum.TryParse(value, ignoreCase: true, out type) && Enum.IsDefined(type);
+
     public static CompanyResponse ToResponse(this Membership membership) =>
-        new(membership.CompanyId, membership.CompanyName, RoleName(membership.Role));
+        new(membership.CompanyId, membership.CompanyName, membership.Sector, membership.Size, RoleName(membership.Role));
 
     public static IResult ToHttpResult<T>(this Result<T> result, Func<T, IResult> onSuccess)
     {
