@@ -32,23 +32,6 @@ public static class DependencyInjection
             .ValidateOnStart();
         services.AddSingleton<IInviteCodes, InviteCodes>();
 
-        services.AddOptions<SupabaseAuthOptions>()
-            .Configure<IConfiguration>((options, config) =>
-            {
-                options.Url = config["SUPABASE_URL"] ?? string.Empty;
-                options.AnonKey = config["SUPABASE_ANON_KEY"] ?? string.Empty;
-            })
-            .Validate(options => Uri.TryCreate(options.Url, UriKind.Absolute, out _) && options.AnonKey.Length > 0,
-                "SUPABASE_URL and SUPABASE_ANON_KEY must be set.")
-            .ValidateOnStart();
-        services.AddHttpClient<IIdentityProvider, SupabaseIdentityProvider>((sp, client) =>
-        {
-            var options = sp.GetRequiredService<IOptions<SupabaseAuthOptions>>().Value;
-            client.BaseAddress = new Uri($"{options.Url.TrimEnd('/')}/auth/v1/");
-            client.DefaultRequestHeaders.Add("apikey", options.AnonKey);
-            client.Timeout = TimeSpan.FromSeconds(10);
-        });
-
         services.Configure<AiEngineOptions>(configuration.GetSection(AiEngineOptions.SectionName));
         services.Configure<R2StorageOptions>(configuration.GetSection(R2StorageOptions.SectionName));
         services.AddHttpClient<IAiEngineClient, AiEngineClient>((sp, client) =>

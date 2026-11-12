@@ -45,12 +45,6 @@ internal sealed class FakeAuditLog : IAuditLog
     }
 }
 
-internal sealed class FakeIdentityProvider(SignUpOutcome outcome) : IIdentityProvider
-{
-    public Task<SignUpOutcome> SignUpAsync(string email, string password, string? captchaToken, CancellationToken ct = default) =>
-        Task.FromResult(outcome);
-}
-
 internal sealed class StubHandler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
 {
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>

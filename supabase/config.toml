@@ -183,8 +183,9 @@ enable_refresh_token_rotation = true
 # Requires enable_refresh_token_rotation = true.
 refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project. Existing users can still sign in.
-# Open sign-up: each new company is created by its first user, and colleagues join with an invite code.
-enable_signup = true
+# Closed registration: accounts are provisioned server-side (Supabase Admin API / Studio),
+# never through the public API or the web app.
+enable_signup = false
 # Allow/disallow anonymous sign-ins to your project.
 enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts

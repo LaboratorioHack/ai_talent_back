@@ -7,7 +7,6 @@ namespace AiTalent.Api.Endpoints;
 internal static class RateLimitPolicies
 {
     public const string InviteJoin = "invite-join";
-    public const string SignUp = "sign-up";
 }
 
 internal static class ApiExtensions

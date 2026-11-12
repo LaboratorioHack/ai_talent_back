@@ -12,7 +12,6 @@ public static class DependencyInjection
         // Registrar aquí los handlers de cada Feature (Features/<Feature>/...).
         services.AddScoped<StaffAccess>();
         services.AddScoped<AuthService>();
-        services.AddScoped<SignUpService>();
         services.AddScoped<CompanyService>();
         services.AddScoped<StaffService>();
         return services;

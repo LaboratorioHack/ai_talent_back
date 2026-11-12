@@ -52,7 +52,6 @@ El inicio de sesión lo maneja **Supabase Auth**. La API solo verifica el token 
 
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
-| POST | `/api/auth/signup` | Público (10 intentos / 15 min por IP) | Crea la cuenta y envía el correo de confirmación. Responde 202 igual para correos nuevos y existentes. |
 | GET | `/api/auth/me` | Usuario autenticado | Devuelve el usuario, si completó MFA y su empresa y rol (`null` si aún no tiene empresa). |
 | POST | `/api/companies` | Sin empresa aún | Crea la empresa y hace admin al usuario. Body: `{ companyName, yourName }`. |
 | POST | `/api/companies/current/invite-codes` | Admin con MFA | Genera un código de invitación válido 7 días. |
@@ -64,20 +63,18 @@ Documentación interactiva: `http://localhost:5022/scalar/v1` (solo en Developme
 
 ### Flujo: alta de una empresa nueva
 
-1. La persona se registra con `POST /api/auth/signup` (correo y contraseña).
-2. Confirma el correo desde el enlace que recibe.
-3. Inicia sesión en Supabase y obtiene un token.
-4. `GET /api/auth/me` devuelve `company: null`, así que la app pide crear o unirse a una empresa.
-5. `POST /api/companies` la crea y la persona queda como **admin**.
-6. Para usar acciones de admin, debe activar MFA (TOTP) en Supabase. Sin MFA, la API responde 403.
+1. Ops crea la cuenta con `scripts/provision-user.sh` (el registro público está cerrado).
+2. La persona inicia sesión en Supabase y obtiene un token.
+3. `GET /api/auth/me` devuelve `company: null`, así que la app pide crear o unirse a una empresa.
+4. `POST /api/companies` la crea y la persona queda como **admin**.
+5. Para usar acciones de admin, debe activar MFA (TOTP) en Supabase. Sin MFA, la API responde 403.
 
 ### Flujo: sumar personal con código de invitación
 
 1. El admin, con MFA, pide un código: `POST /api/companies/current/invite-codes`.
 2. Comparte el código con la persona (la app no lo envía).
-3. La persona se registra, confirma su correo y hace login.
-4. `POST /api/companies/join` con `{ code, yourName }` la añade como **recruiter**.
-5. Si hace falta un admin nuevo, otro admin lo promueve con `PATCH /api/staff/{userId}`.
+3. La persona hace login (su cuenta ya fue creada por ops) y llama a `POST /api/companies/join` con `{ code, yourName }`; queda como **recruiter**.
+4. Si hace falta un admin nuevo, otro admin lo promueve con `PATCH /api/staff/{userId}`.
 
 ### Reglas del código de invitación
 
@@ -87,15 +84,33 @@ Documentación interactiva: `http://localhost:5022/scalar/v1` (solo en Developme
 - Quien ya pertenece a una empresa no puede unirse a otra (409).
 - Si entra la persona equivocada, un admin la desactiva con `PATCH` y pierde acceso de inmediato.
 
+### Alta de usuarios (registro cerrado)
+
+No hay registro público: `supabase/config.toml` define `enable_signup = false` y la API no expone `/api/auth/signup`. El login, el refresh de token y la recuperación de contraseña siguen funcionando en Supabase Auth.
+
+Las cuentas se crean desde ops, nunca desde el navegador:
+
+```bash
+export SUPABASE_URL="https://<project-ref>.supabase.co"
+export SUPABASE_SERVICE_ROLE_KEY="<service-role-key>"   # nunca en el front ni en la API
+./scripts/provision-user.sh persona@empresa.com "Nombre Persona"
+```
+
+El script usa `POST /auth/v1/admin/users` con `email_confirm: true`, así que la persona puede iniciar sesión de inmediato. Solo crea el usuario de Auth: la empresa y el rol se crean después con `POST /api/companies` (o `POST /api/companies/join`).
+
+También se puede hacer a mano en Supabase Studio → Authentication → Users → Add user (marcando *Auto Confirm User*).
+
+En el proyecto hospedado hay que desactivar también **Authentication → Sign In / Providers → Allow new users to sign up**. `supabase db push` no aplica esta configuración; si solo se cambia `config.toml`, el proyecto remoto sigue permitiendo registros.
+
 ### Configuración necesaria
 
 | Variable | Dónde | Notas |
 |---|---|---|
 | `SUPABASE_URL` | API | URL del proyecto Supabase |
-| `SUPABASE_ANON_KEY` | API | Clave pública. Nunca la service role. |
 | `INVITES__SIGNINGKEY` | API | Mínimo 32 caracteres. Generar con `openssl rand -base64 48`. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Ops / AI Engine | Solo para `scripts/provision-user.sh` y Storage. Nunca en la API ni en el navegador. |
 
-La API no arranca si falta alguna de estas variables.
+La API no arranca si falta `SUPABASE_URL` (fuera de Development) o `INVITES__SIGNINGKEY`.
 
 ## CI/CD (sin redundancia)
 

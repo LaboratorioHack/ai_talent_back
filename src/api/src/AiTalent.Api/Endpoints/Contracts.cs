@@ -1,9 +1,5 @@
 namespace AiTalent.Api.Endpoints;
 
-internal sealed record SignUpRequest(string? Email, string? Password, string? CaptchaToken);
-
-internal sealed record MessageResponse(string Message);
-
 internal sealed record CreateCompanyRequest(string? CompanyName, string? YourName);
 
 internal sealed record JoinCompanyRequest(string? Code, string? YourName);
