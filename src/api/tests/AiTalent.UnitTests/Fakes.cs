@@ -265,4 +265,7 @@ internal sealed class FakeAiEngineClient : IAiEngineClient
 
     public Task<EvidenceSearchResponse> SearchEvidenceAsync(EvidenceSearchRequest request, CancellationToken cancellationToken = default) =>
         throw new NotImplementedException();
+
+    public Task<CompareCandidatesResponse> CompareAsync(CompareCandidatesRequest request, CancellationToken cancellationToken = default) =>
+        throw new NotImplementedException();
 }
