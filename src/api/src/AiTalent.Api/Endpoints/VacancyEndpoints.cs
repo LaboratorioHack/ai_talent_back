@@ -200,6 +200,23 @@ internal static class VacancyEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        vacancies.MapGet("{id:guid}/public", async (
+                Guid id,
+                PublicVacancyService service,
+                CancellationToken ct) =>
+            {
+                var result = await service.GetAsync(id, ct);
+                return result.ToHttpResult(publicVacancy => Results.Ok(ToPublic(publicVacancy)));
+            })
+            .AllowAnonymous()
+            .RequireRateLimiting(RateLimitPolicies.PublicRead)
+            .WithName("GetPublicVacancy")
+            .WithSummary("Get an open vacancy (public)")
+            .WithDescription("Public page of a vacancy that is accepting applications (OPEN and before its closing date). Returns the title, area, closing date, company name, description and requirements (type, category, description, condition). Weights and equivalences are not exposed. Anything else returns 404.")
+            .Produces<PublicVacancyResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
         vacancies.MapGet("{id:guid}/applications", async (
                 Guid id,
                 ClaimsPrincipal user,
@@ -374,6 +391,29 @@ internal static class VacancyEndpoints
             ZeroCounts,
             vacancy.CreatedAt,
             vacancy.UpdatedAt);
+    }
+
+    private static PublicVacancyResponse ToPublic(PublicVacancy publicVacancy)
+    {
+        var vacancy = publicVacancy.Vacancy;
+        var profile = vacancy.CurrentProfile;
+        var requirements = profile is null
+            ? new List<PublicRequirementResponse>()
+            : profile.Requirements.Select(requirement => new PublicRequirementResponse(
+                requirement.Type.ToString().ToUpperInvariant(),
+                requirement.Category,
+                requirement.Description,
+                requirement.Condition)).ToList();
+
+        return new PublicVacancyResponse(
+            vacancy.Id,
+            vacancy.Title,
+            vacancy.Area,
+            vacancy.ClosingAt,
+            vacancy.Positions,
+            publicVacancy.CompanyName,
+            profile?.Description,
+            requirements);
     }
 
     private static RequirementResponse ToResponse(Requirement requirement) =>

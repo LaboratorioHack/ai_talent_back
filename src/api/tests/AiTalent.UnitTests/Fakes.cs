@@ -64,6 +64,9 @@ internal sealed class FakeJobOpeningRepository : IJobOpeningRepository
     public Task<JobOpening?> FindForApplicationAsync(Guid id, CancellationToken ct = default) =>
         Task.FromResult(Vacancies.FirstOrDefault(vacancy => vacancy.Id == id && vacancy.DeletedAt is null));
 
+    public Task<JobOpening?> FindPublicAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult(Vacancies.FirstOrDefault(vacancy => vacancy.Id == id && vacancy.DeletedAt is null));
+
     public Task<bool> IsProfileInUseAsync(Guid roleProfileId, CancellationToken ct = default) =>
         Task.FromResult(UsedProfiles.Contains(roleProfileId));
 

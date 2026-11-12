@@ -8,6 +8,7 @@ internal static class RateLimitPolicies
 {
     public const string InviteJoin = "invite-join";
     public const string CandidateApply = "candidate-apply";
+    public const string PublicRead = "public-read";
 }
 
 internal static class ApiExtensions

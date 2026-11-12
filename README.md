@@ -99,6 +99,7 @@ Cada vacante tiene un perfil de cargo versionado con sus requisitos. El perfil s
 | POST | `/api/vacancies/{id}/close` | Pasa de `OPEN` a `CLOSED`. |
 | DELETE | `/api/vacancies/{id}` | Borrado lógico: deja de aparecer y responde 404, pero conserva postulaciones y auditoría. |
 | PUT | `/api/vacancies/{id}/profile` | Reemplaza descripción y requisitos. Crea versión nueva si el perfil ya se usó. |
+| GET | `/api/vacancies/{id}/public` | **Público (sin login).** Página de una vacante abierta: título, área, cierre, plazas, empresa, descripción y requisitos (`type`, `category`, `description`, `condition`). No expone pesos ni equivalencias. Responde 404 si no está `OPEN`, venció el cierre, fue eliminada o no existe. |
 | GET | `/api/vacancies/{id}/applications` | Lista las postulaciones recibidas para la vacante (candidato, estado de selección y estado/procesamiento del CV más reciente). Requiere miembro activo de la empresa. |
 | POST | `/api/vacancies/{id}/applications` | **Público (sin login).** Postulación de un candidato con un solo CV (`multipart/form-data`: `file` PDF/DOCX ≤ 10 MB, `name`, `email`, `consent=true`). Solo vacantes `OPEN` y antes del cierre; volver a postular a la misma vacante se rechaza. No devuelve puntajes ni ranking. |
 
