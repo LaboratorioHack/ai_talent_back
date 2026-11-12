@@ -1,4 +1,6 @@
 import logging
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -8,9 +10,19 @@ from ai_engine.api.openapi import configure_openapi
 from ai_engine.api.routers import cvs, evaluations, health, rag
 from ai_engine.core.config import get_settings
 from ai_engine.core.security import require_internal_api_key
+from ai_engine.persistence.db import close_pool
 
 logger = logging.getLogger("ai_engine")
 settings = get_settings()
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    try:
+        yield
+    finally:
+        await close_pool()
+
 
 # OWASP A02: no Swagger/ReDoc/Scalar in production.
 app = FastAPI(
@@ -20,6 +32,7 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
     openapi_url=None if settings.is_production else "/openapi.json",
+    lifespan=lifespan,
 )
 
 if not settings.is_production:

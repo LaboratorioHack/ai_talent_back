@@ -8,6 +8,7 @@ dependencies = []
 [project.scripts]
 dev = "tooling.dev:main"
 test-engine = "tooling.dev:test_engine"
+seed-resumes = "tooling.dev:seed_resumes"
 
 [build-system]
 requires = ["uv_build>=0.12.19,<0.13.0"]

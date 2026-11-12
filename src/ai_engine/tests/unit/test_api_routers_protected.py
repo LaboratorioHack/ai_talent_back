@@ -34,3 +34,15 @@ def test_business_routes_require_api_key() -> None:
         ).status_code
         != 401
     )
+    compare_body = {
+        "role_profile_id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "resume_ids": [
+            "11111111-1111-1111-1111-111111111111",
+            "22222222-2222-2222-2222-222222222222",
+        ],
+    }
+    assert client.post("/v1/evaluations/compare", json=compare_body).status_code == 401
+    assert (
+        client.post("/v1/evaluations/compare", json=compare_body, headers=headers).status_code
+        != 401
+    )
