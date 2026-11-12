@@ -68,12 +68,6 @@ builder.Services.AddRateLimiter(options =>
         RateLimitPartition.GetFixedWindowLimiter(
             context.User.FindFirstValue("sub") ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(15) }));
-
-    // Sign-up creates accounts and sends email, so it is limited per IP address.
-    options.AddPolicy<string>(RateLimitPolicies.SignUp, context =>
-        RateLimitPartition.GetFixedWindowLimiter(
-            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(15) }));
 });
 
 // Behind Caddy: trust X-Forwarded-* so rate limiting sees the real client IP.
@@ -116,6 +110,7 @@ app.MapHealthEndpoints();
 app.MapAuthEndpoints();
 app.MapCompanyEndpoints();
 app.MapStaffEndpoints();
+app.MapVacancyEndpoints();
 
 await app.RunAsync();
 
