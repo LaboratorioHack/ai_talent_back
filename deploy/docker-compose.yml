@@ -33,6 +33,9 @@ services:
     <<: *hardening
     image: ghcr.io/laboratoriohack/ai-talent-web:latest
     tmpfs: ["/tmp", "/app/.next/cache:uid=1000,gid=1000"]   # Next.js cache needs a writable dir
+    environment:
+      # Server Components call the API over the internal network; the browser uses /api through Caddy.
+      API_INTERNAL_URL: http://api:8080/api
     expose: ["3000"]
 
   api:
