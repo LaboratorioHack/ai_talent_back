@@ -37,8 +37,17 @@ internal static class RankingMapping
             ? "Se postuló con el enlace"
             : "Subida por tu equipo";
 
-    public static string? ToIsoDate(DateTimeOffset? value) =>
-        value?.ToString("yyyy-MM-dd");
+    /// <summary>Calendar day in Bogotá, like the rest of the API (a vacancy closing at 23:59 local is that day, not the next).</summary>
+    public static string? ToIsoDate(DateTimeOffset? value) => Portal.Dates.Day(value);
+
+    /// <summary>
+    /// Points a requirement adds to the 0–100 total: its weight times how well it is met. The engine stores
+    /// the per-requirement score (0–100); the web app shows what each one contributes.
+    /// </summary>
+    public static double Contribution(decimal requirementScore, Requirement? requirement) =>
+        requirement is null || requirement.Type == RequirementType.Disqualifying
+            ? 0
+            : Math.Round((double)(requirement.Weight * requirementScore / 100m), 1);
 
     public static RankedCandidateResponse MapCandidate(
         VacancyEvaluationSnapshot snapshot,
@@ -65,7 +74,7 @@ internal static class RankingMapping
                     result.RequirementResultId,
                     result.RequirementId,
                     ToFrontendResult(result.Result),
-                    (double)result.Score,
+                    Contribution(result.Score, requirement),
                     (double)result.Confidence,
                     result.Justification ?? string.Empty,
                     result.Evidence.Select(evidence => new EvidenceResponse(
