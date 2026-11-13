@@ -126,7 +126,7 @@ public sealed class CandidateApplicationService(
                     $"Could not store the CV file: {ex.Message}");
             }
 
-            var resume = new Resume(candidateId, version, fileKey, hash);
+            var resume = new Resume(candidateId, version, fileKey, hash, Path.GetFileName(command.FileName), contentType, bytes.LongLength);
             var application = new Domain.Entities.Application(vacancy.Id, candidateId, ApplicationSource.Candidate);
             resumes.Add(resume);
             applications.Add(application);

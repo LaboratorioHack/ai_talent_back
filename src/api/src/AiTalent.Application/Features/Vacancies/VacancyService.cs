@@ -93,7 +93,8 @@ public sealed class VacancyService(
         DateTimeOffset? closingAt,
         int? positions,
         ProfileInput? profile,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        VacancyListing? listing = null)
     {
         var member = await access.GetActiveMemberAsync(actor.UserId, ct);
         if (!member.IsSuccess)
@@ -113,6 +114,12 @@ public sealed class VacancyService(
             return Invalid(profileError);
         }
 
+        var listingError = ValidateListing(listing, out var cleanListing);
+        if (listingError is not null)
+        {
+            return Invalid(listingError);
+        }
+
         var vacancy = new JobOpening(
             member.Value!.CompanyId,
             actor.UserId,
@@ -120,6 +127,10 @@ public sealed class VacancyService(
             cleanArea,
             closingAt?.ToUniversalTime(),
             cleanPositions);
+        if (cleanListing is not null)
+        {
+            vacancy.SetListing(cleanListing);
+        }
 
         if (profile is not null)
         {
@@ -148,7 +159,8 @@ public sealed class VacancyService(
         string? area,
         DateTimeOffset? closingAt,
         int? positions,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        VacancyListing? listing = null)
     {
         var member = await access.GetActiveMemberAsync(actor.UserId, ct);
         if (!member.IsSuccess)
@@ -168,7 +180,17 @@ public sealed class VacancyService(
             return Invalid(metadataError);
         }
 
+        var listingError = ValidateListing(listing, out var cleanListing);
+        if (listingError is not null)
+        {
+            return Invalid(listingError);
+        }
+
         vacancy.Update(cleanTitle, cleanArea, closingAt?.ToUniversalTime(), cleanPositions);
+        if (cleanListing is not null)
+        {
+            vacancy.SetListing(cleanListing);
+        }
         await unitOfWork.SaveChangesAsync(ct);
         await audit.RecordAsync(
             actor.UserId,
@@ -398,6 +420,39 @@ public sealed class VacancyService(
         if (!Validation.IsClosingAt(closingAt))
         {
             return "The closing date must be in the future.";
+        }
+
+        return null;
+    }
+
+    /// <summary>Trims the listing; null means "leave it as it is".</summary>
+    private static string? ValidateListing(VacancyListing? listing, out VacancyListing? clean)
+    {
+        clean = null;
+        if (listing is null)
+        {
+            return null;
+        }
+
+        var modality = Normalize(listing.Modality)?.ToUpperInvariant();
+        if (modality is not null && !VacancyListing.Modalities.Contains(modality))
+        {
+            return "Modality must be ONSITE, HYBRID or REMOTE.";
+        }
+
+        clean = new VacancyListing(
+            Normalize(listing.Location),
+            modality,
+            Normalize(listing.ContractType),
+            Normalize(listing.Schedule),
+            Normalize(listing.Salary));
+
+        foreach (var (name, value) in new[] { ("Location", clean.Location), ("Contract", clean.ContractType), ("Schedule", clean.Schedule), ("Salary", clean.Salary) })
+        {
+            if (value is not null && (value.Length < (name == "Salary" ? 1 : 2) || value.Length > 80))
+            {
+                return $"{name} must be between 2 and 80 characters.";
+            }
         }
 
         return null;
