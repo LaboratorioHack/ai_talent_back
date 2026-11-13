@@ -49,7 +49,7 @@ internal sealed class InterviewReadStore(AppDbContext db) : IInterviewReadStore
             join app.job_openings jo on jo.id = a.job_opening_id
             where jo.company_id = @company_id
               and jo.deleted_at is null
-              and (@interview_id is null or i.id = @interview_id)
+              and (cast(@interview_id as uuid) is null or i.id = cast(@interview_id as uuid))
             order by coalesce(i.started_at, i.created_at) desc
             """;
 
