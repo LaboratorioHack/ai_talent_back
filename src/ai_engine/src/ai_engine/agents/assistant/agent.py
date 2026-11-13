@@ -55,6 +55,5 @@ class AssistantAgent:
         text = await self._llm.complete_chat(
             system_prompt(request.audience, request.context),
             [turn.model_dump() for turn in request.messages],
-            max_tokens=700,
         )
         return AssistantResponse(reply=text or "No tengo una respuesta para eso todavía.")

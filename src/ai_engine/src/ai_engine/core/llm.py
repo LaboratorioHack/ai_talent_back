@@ -74,9 +74,18 @@ class LlmClient:
         return _text_from_message(message)
 
     async def complete_chat(
-        self, system: str, messages: list[dict[str, str]], *, max_tokens: int = 1024
+        self,
+        system: str,
+        messages: list[dict[str, str]],
+        *,
+        max_tokens: int = 4096,
+        effort: str = "low",
     ) -> str:
-        """A multi-turn conversation (``role``/``content`` turns, the last one from the user)."""
+        """A multi-turn conversation (``role``/``content`` turns, the last one from the user).
+
+        Current models think before answering; ``max_tokens`` must leave room for that, and a
+        chat reply needs little of it (``effort``), so it stays fast and cheap.
+        """
 
         async def _once() -> Any:
             return await self._client.messages.create(
@@ -84,10 +93,14 @@ class LlmClient:
                 max_tokens=max_tokens,
                 system=system,
                 messages=messages,
+                output_config={"effort": effort},
             )
 
         message = await self._with_retry(_once)
-        return _text_from_message(message)
+        text = _text_from_message(message)
+        if not text:
+            logger.warning("Chat reply without text (stop_reason=%s)", message.stop_reason)
+        return text
 
     async def complete_json(
         self,
