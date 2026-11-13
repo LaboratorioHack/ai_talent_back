@@ -123,7 +123,11 @@ app.MapAuthEndpoints();
 app.MapCompanyEndpoints();
 app.MapStaffEndpoints();
 app.MapVacancyEndpoints();
+app.MapRankingEndpoints();
+app.MapInterviewEndpoints();
+app.MapGovernanceEndpoints();
 app.MapEvaluationEndpoints();
+app.MapRoleProfileEndpoints();
 app.MapDashboardEndpoints();
 
 await app.RunAsync();
