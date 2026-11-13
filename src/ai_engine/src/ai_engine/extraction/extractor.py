@@ -29,6 +29,22 @@ CRITICAL RESPONSIBLE AI RULES:
    Add compliance_flags such as photo_reference, institution_name_omitted, and
    gendered_language when applicable. Keep pii_scrubbed true when any leftover
    indicator is found or placeholders are present.
+
+COMPLETENESS (the profile is rendered back to the person as a full résumé):
+- headline: the person's current or most recent job title, a few words.
+- work_experience: EVERY position in the CV, most recent first, with title, company
+  (leave it empty when the CV only shows a placeholder such as "Company Name"),
+  start_date and end_date as written (use "Current" for an ongoing role), and the 3 to 6
+  most important achievements as highlights, one concise sentence each. Never skip a
+  position to save space; shorten the highlights instead.
+- education: every degree, with degree, field, level (e.g. bachelor, master, doctorate,
+  technical) and dates when the CV gives them.
+- projects: notable named projects (name, one-sentence description, technologies).
+- leadership: leadership roles, volunteering, teaching, communities and activities.
+- awards: awards and recognitions, one line each.
+- certifications and languages (with level when given) as lists of strings.
+- skills: up to 30 concrete skills, tools and technologies, without generic words.
+Leave a list empty when the CV has nothing for it. Do not invent anything.
 """
 
 _RESIDUAL_FLAG = "residual_pii_detected"
@@ -45,7 +61,9 @@ async def extract_profile(
         _SYSTEM,
         f"CV text:\n\n{anonymized_text[:120_000]}",
         StructuredCandidateProfile,
-        max_tokens=2048,
+        # A long CV (several roles with their achievements) needs far more than a summary: with a
+        # small budget the tool call is cut and the experience or education are lost.
+        max_tokens=8192,
     )
     profile.extractor_version = settings.extractor_version
     profile.bias_guardrail_telemetry = _merge_telemetry(

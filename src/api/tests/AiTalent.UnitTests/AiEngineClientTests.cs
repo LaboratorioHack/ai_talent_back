@@ -89,6 +89,8 @@ public class AiEngineClientTests
                 "total_experience_months": 48,
                 "seniority_level": "senior",
                 "skills": ["python"],
+                "work_experience": [{"title": "Backend engineer", "highlights": ["Built the API"]}],
+                "education": [{"degree": "B.Sc.", "field": "Computer Science"}],
                 "parser_strategy": "native_layout",
                 "ocr_confidence": null,
                 "extractor_version": "v1.1.0",
@@ -118,6 +120,16 @@ public class AiEngineClientTests
         Assert.Equal(1, telemetry.AttributesSanitized.NamesRemoved);
         Assert.Equal(2, telemetry.AttributesSanitized.ContactInfoRemoved);
         Assert.Contains("residual_pii_detected", telemetry.ComplianceFlags);
+
+        // The API stores the profile again: fields it does not model must survive, or the CV loses its experience.
+        var stored = System.Text.Json.JsonSerializer.Serialize(
+            result.ProfessionalData,
+            new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.SnakeCaseLower });
+        using var roundTrip = System.Text.Json.JsonDocument.Parse(stored);
+        Assert.Equal("Backend engineer", roundTrip.RootElement.GetProperty("work_experience")[0].GetProperty("title").GetString());
+        Assert.Equal("B.Sc.", roundTrip.RootElement.GetProperty("education")[0].GetProperty("degree").GetString());
+        Assert.Equal("Backend engineer", roundTrip.RootElement.GetProperty("summary").GetString());
+        Assert.False(roundTrip.RootElement.TryGetProperty("extra", out _));
     }
 
     [Fact]

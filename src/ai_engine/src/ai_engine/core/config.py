@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     r2_public_base_url: str = ""
 
     max_upload_bytes: int = 10 * 1024 * 1024
-    extractor_version: str = "v1.1.0"
+    extractor_version: str = "v1.2.0"
     prompt_version: str = "eval-v1"
 
     @property

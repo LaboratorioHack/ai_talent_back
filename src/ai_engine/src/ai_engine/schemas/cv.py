@@ -1,7 +1,6 @@
-from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class WorkExperience(BaseModel):
@@ -11,6 +10,24 @@ class WorkExperience(BaseModel):
     end_date: str | None = None
     months: int | None = None
     highlights: list[str] = Field(default_factory=list)
+    technologies: list[str] = Field(default_factory=list)
+
+
+class Education(BaseModel):
+    """Degree without the institution (Responsible AI: no university prestige or location)."""
+
+    model_config = ConfigDict(extra="allow")
+
+    degree: str = ""
+    field: str = ""
+    level: str | None = None
+    start_date: str | None = None
+    end_date: str | None = None
+
+
+class Project(BaseModel):
+    name: str = ""
+    description: str = ""
     technologies: list[str] = Field(default_factory=list)
 
 
@@ -29,11 +46,15 @@ class BiasGuardrailTelemetry(BaseModel):
 
 
 class StructuredCandidateProfile(BaseModel):
+    headline: str = ""
     summary: str = ""
     total_experience_months: int | None = None
     seniority_level: str | None = None
     work_experience: list[WorkExperience] = Field(default_factory=list)
-    education: list[dict[str, Any]] = Field(default_factory=list)
+    education: list[Education] = Field(default_factory=list)
+    projects: list[Project] = Field(default_factory=list)
+    leadership: list[str] = Field(default_factory=list)
+    awards: list[str] = Field(default_factory=list)
     skills: list[str] = Field(default_factory=list)
     certifications: list[str] = Field(default_factory=list)
     languages: list[str] = Field(default_factory=list)

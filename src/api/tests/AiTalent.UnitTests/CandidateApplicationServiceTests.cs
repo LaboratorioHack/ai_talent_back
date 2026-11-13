@@ -12,13 +12,14 @@ public class CandidateApplicationServiceTests
     private readonly FakeCandidateRepository _candidates = new();
     private readonly FakeResumeRepository _resumes = new();
     private readonly FakeApplicationRepository _applications = new();
+    private readonly FakeStaffRepository _staff = new();
     private readonly FakeCvFileStorage _storage = new();
     private readonly FakeAiEngineClient _engine = new();
     private readonly FakeUnitOfWork _unitOfWork = new();
     private readonly Guid _companyId = Guid.NewGuid();
 
     private CandidateApplicationService CreateService() =>
-        new(_vacancies, _candidates, _resumes, _applications, _storage, _engine, _unitOfWork);
+        new(_vacancies, _candidates, _resumes, _applications, _staff, _storage, _engine, _unitOfWork);
 
     private JobOpening CreateOpenVacancy()
     {
@@ -47,6 +48,20 @@ public class CandidateApplicationServiceTests
             contentType,
             bytes.Length,
             () => new MemoryStream(bytes));
+    }
+
+    [Fact]
+    public async Task CompanyStaffCannotApply()
+    {
+        var vacancy = CreateOpenVacancy();
+        var userId = Guid.NewGuid();
+        _staff.Add(new StaffMember(userId, _companyId, "Jane Doe", StaffRole.Recruiter));
+
+        var result = await CreateService().ApplyAsync(MakeCommand(vacancy.Id) with { SubmittedBy = userId });
+
+        Assert.Equal(ErrorKind.Forbidden, result.Error!.Kind);
+        Assert.Empty(_applications.Applications);
+        Assert.Empty(_storage.Uploads);
     }
 
     [Fact]
