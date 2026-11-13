@@ -4,14 +4,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # A variable present but empty (compose passes ${VAR} even when .env lacks it) means "not set":
+    # otherwise an empty ANTHROPIC_MODEL would replace the default and every Claude call would fail.
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", env_ignore_empty=True)
 
     environment: str = "development"
 
     engine_api_key: str = ""
 
     anthropic_api_key: str = ""
-    anthropic_model: str = "claude-sonnet-5-5"
+    anthropic_model: str = "claude-haiku-5-5"
     anthropic_vision_model: str = ""
 
     # Embeddings: Nvidia (primary) + Voyage (fallback), both via OpenRouter
