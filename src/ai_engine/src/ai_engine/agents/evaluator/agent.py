@@ -13,7 +13,7 @@ from ai_engine.core.llm import LlmClient
 from ai_engine.rag.knowledge.taxonomy import transferability
 from ai_engine.rag.retrieval.evidence_retriever import RetrievedEvidence
 
-_PROMPT_VERSION = "evaluator-v2"
+_PROMPT_VERSION = "evaluator-v3"
 
 _SYSTEM = (
     "You are a senior technical recruiter evaluating anonymized CV evidence "
@@ -26,7 +26,9 @@ _SYSTEM = (
     '{"assessments": [{"requirement_id": "<id copied from requirements>", '
     '"result": "MEETS" | "PARTIALLY_MEETS" | "DOES_NOT_MEET" | "NO_EVIDENCE", '
     '"score": <number 0-100>, "confidence": <number 0-1>, '
-    '"justification": "<one sentence in Spanish>", "fragment_ids": ["<resume_fragment_id>"]}], '
+    '"justification": "<one sentence in Spanish>", "fragment_ids": ["<resume_fragment_id>"], '
+    '"quote": "<the line from the evidence quote that proves it, copied word for word, '
+    'at most 200 characters; empty string if there is none>"}], '
     '"strengths": [{"description": "<short Spanish phrase>"}], '
     '"gaps": [{"description": "<short Spanish phrase>"}], '
     '"reasoning_summary": "<two sentences in Spanish>"}\n'
