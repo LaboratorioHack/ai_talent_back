@@ -133,6 +133,9 @@ internal sealed class FakeInviteCodes : IInviteCodes
 
 internal sealed class FakeCandidateRepository : ICandidateRepository
 {
+    public Task<IReadOnlyList<Candidate>> ListByEmailAsync(string normalizedEmail, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<Candidate>>(Candidates.Where(candidate => candidate.ContactEmail == normalizedEmail).ToList());
+
     public List<Candidate> Candidates { get; } = [];
 
     public Task<Candidate?> FindByCompanyAndEmailAsync(Guid companyId, string normalizedEmail, CancellationToken ct = default) =>

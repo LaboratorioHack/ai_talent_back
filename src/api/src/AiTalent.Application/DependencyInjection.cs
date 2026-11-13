@@ -38,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<PortalService>();
         services.AddScoped<CandidateInterviewService>();
         services.AddScoped<ApplicationActionsService>();
+        services.AddScoped<ApplicantResumeService>();
         services.TryAddSingleton(TimeProvider.System);
         return services;
     }

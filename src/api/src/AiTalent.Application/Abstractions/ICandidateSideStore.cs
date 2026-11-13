@@ -46,7 +46,10 @@ public sealed record ApplicantResumeRow(
     string? ContentType,
     long? SizeBytes,
     DateTimeOffset CreatedAt,
-    string? ProfessionalData);
+    string? ProfessionalData,
+    string ProcessingStatus = "PROCESSED");
+
+public sealed record ResumeVersionRow(string FileName, DateTimeOffset CreatedAt);
 
 /// <summary>Who gets invited to the AI interview, scoped to the recruiter's company.</summary>
 public sealed record InterviewTarget(
@@ -106,6 +109,9 @@ public interface ICandidateSideStore
     Task<IReadOnlyList<ApplicantApplicationRow>> ListApplicantApplicationsAsync(string email, CancellationToken ct = default);
 
     Task<ApplicantResumeRow?> FindLatestResumeAsync(string email, CancellationToken ct = default);
+
+    /// <summary>Distinct CV files the person has sent (same file in several companies counts once), newest first.</summary>
+    Task<IReadOnlyList<ResumeVersionRow>> ListResumeVersionsAsync(string email, CancellationToken ct = default);
 
     /// <summary>Withdraws an open application of this e-mail. False when it does not exist or is already closed.</summary>
     Task<bool> WithdrawAsync(string email, Guid applicationId, CancellationToken ct = default);

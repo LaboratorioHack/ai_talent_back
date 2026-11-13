@@ -87,7 +87,7 @@ internal sealed class CandidateSideStore(AppDbContext db) : ICandidateSideStore
         var rows = await db.Database.SqlQuery<ResumeSql>($"""
             select r.id as "ResumeId", c.name as "CandidateName", r.file_key as "FileKey", r.file_name as "FileName",
                    r.content_type as "ContentType", r.size_bytes as "SizeBytes", r.created_at as "CreatedAt",
-                   r.professional_data::text as "ProfessionalData"
+                   r.professional_data::text as "ProfessionalData", r.processing_status as "ProcessingStatus"
             from app.resumes r
             join app.candidates c on c.id = r.candidate_id
             where lower(c.contact_email) = lower({email})
@@ -95,7 +95,21 @@ internal sealed class CandidateSideStore(AppDbContext db) : ICandidateSideStore
             limit 1
             """).ToListAsync(ct);
 
-        return rows.Select(row => new ApplicantResumeRow(row.ResumeId, row.CandidateName, row.FileKey, row.FileName, row.ContentType, row.SizeBytes, row.CreatedAt, row.ProfessionalData)).FirstOrDefault();
+        return rows.Select(row => new ApplicantResumeRow(row.ResumeId, row.CandidateName, row.FileKey, row.FileName, row.ContentType, row.SizeBytes, row.CreatedAt, row.ProfessionalData, row.ProcessingStatus)).FirstOrDefault();
+    }
+
+    public async Task<IReadOnlyList<ResumeVersionRow>> ListResumeVersionsAsync(string email, CancellationToken ct = default)
+    {
+        var rows = await db.Database.SqlQuery<ResumeVersionSql>($"""
+            select coalesce(min(r.file_name), 'hoja_de_vida.pdf') as "FileName", min(r.created_at) as "CreatedAt"
+            from app.resumes r
+            join app.candidates c on c.id = r.candidate_id
+            where lower(c.contact_email) = lower({email})
+            group by coalesce(r.file_hash, r.id::text)
+            order by min(r.created_at) desc
+            limit 20
+            """).ToListAsync(ct);
+        return rows.Select(row => new ResumeVersionRow(row.FileName, row.CreatedAt)).ToList();
     }
 
     public async Task<bool> WithdrawAsync(string email, Guid applicationId, CancellationToken ct = default)
@@ -441,6 +455,15 @@ internal sealed class CandidateSideStore(AppDbContext db) : ICandidateSideStore
         public DateTimeOffset CreatedAt { get; set; }
 
         public string? ProfessionalData { get; set; }
+
+        public string ProcessingStatus { get; set; } = string.Empty;
+    }
+
+    internal sealed class ResumeVersionSql
+    {
+        public string FileName { get; set; } = string.Empty;
+
+        public DateTimeOffset CreatedAt { get; set; }
     }
 
     internal sealed class InterviewTargetSql

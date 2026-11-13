@@ -18,7 +18,7 @@ internal sealed class FakeEvaluationReadStore : IEvaluationReadStore
         Task.FromResult<IReadOnlyList<VacancyEvaluationSnapshot>>(
             ByVacancy.TryGetValue((vacancyId, roleProfileId), out var list) ? list : []);
 
-    public Task<GovernanceEvaluationStats> GetGovernanceEvaluationStatsAsync(Guid companyId, CancellationToken ct = default) =>
+    public Task<GovernanceEvaluationStats> GetGovernanceEvaluationStatsAsync(Guid companyId, DateTimeOffset since, CancellationToken ct = default) =>
         Task.FromResult(GovernanceStats);
 }
 
@@ -39,13 +39,13 @@ internal sealed class FakeGovernanceReadStore : IGovernanceReadStore
     public int HumanDecisions { get; set; }
     public int AiErrorsFlagged { get; set; }
 
-    public Task<IReadOnlyList<AuditLogEntry>> ListForCompanyAsync(Guid companyId, int limit, CancellationToken ct = default) =>
+    public Task<IReadOnlyList<AuditLogEntry>> ListForCompanyAsync(Guid companyId, int limit, DateTimeOffset since, CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<AuditLogEntry>>(Entries.Take(limit).ToList());
 
-    public Task<int> CountHumanDecisionsAsync(Guid companyId, CancellationToken ct = default) =>
+    public Task<int> CountHumanDecisionsAsync(Guid companyId, DateTimeOffset since, CancellationToken ct = default) =>
         Task.FromResult(HumanDecisions);
 
-    public Task<int> CountAiErrorsFlaggedAsync(Guid companyId, CancellationToken ct = default) =>
+    public Task<int> CountAiErrorsFlaggedAsync(Guid companyId, DateTimeOffset since, CancellationToken ct = default) =>
         Task.FromResult(AiErrorsFlagged);
 }
 
@@ -64,6 +64,8 @@ internal sealed class FakeCandidateSideStore : ICandidateSideStore
     public Task<IReadOnlyList<ApplicantApplicationRow>> ListApplicantApplicationsAsync(string email, CancellationToken ct = default) => throw new NotSupportedException();
 
     public Task<ApplicantResumeRow?> FindLatestResumeAsync(string email, CancellationToken ct = default) => throw new NotSupportedException();
+
+    public Task<IReadOnlyList<ResumeVersionRow>> ListResumeVersionsAsync(string email, CancellationToken ct = default) => throw new NotSupportedException();
 
     public Task<bool> WithdrawAsync(string email, Guid applicationId, CancellationToken ct = default) => throw new NotSupportedException();
 

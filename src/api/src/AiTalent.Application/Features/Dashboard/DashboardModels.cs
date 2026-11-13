@@ -15,7 +15,7 @@ public sealed record DashboardVacancy(
     string ClosesAt,
     IReadOnlyDictionary<string, PeriodStats> ByPeriod);
 
-public sealed record TopProfile(Guid ApplicationId, string Name, string Vacancy, int Score);
+public sealed record TopProfile(Guid ApplicationId, string Name, string Vacancy, int Score, Guid VacancyId);
 
 /// <summary>`kind` is unreadable, duplicate or contrast (contrast needs interviews, not computed yet).</summary>
 public sealed record PendingItem(string Id, string Kind, string Text, string ActionLabel, string Href);

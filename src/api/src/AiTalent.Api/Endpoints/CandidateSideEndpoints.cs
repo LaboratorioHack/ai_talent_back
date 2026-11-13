@@ -91,6 +91,37 @@ internal static class CandidateSideEndpoints
             .WithSummary("The file of my latest CV")
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        me.MapPost("resume", async (HttpRequest request, ClaimsPrincipal user, ApplicantResumeService service, CancellationToken ct) =>
+                {
+                    if (user.Email() is not { } email)
+                    {
+                        return NoEmail();
+                    }
+
+                    if (!request.HasFormContentType)
+                    {
+                        return Results.Problem(detail: "A multipart form with the CV file is required.", statusCode: StatusCodes.Status400BadRequest);
+                    }
+
+                    var form = await request.ReadFormAsync(ct);
+                    if (form.Files.GetFile("file") is not { } file)
+                    {
+                        return Results.Problem(detail: "A CV file is required (PDF or DOCX).", statusCode: StatusCodes.Status400BadRequest);
+                    }
+
+                    var command = new UploadResumeCommand(file.FileName, file.ContentType, file.Length, file.OpenReadStream);
+                    return (await service.UploadAsync(user.ToUserId(), email, command, ct)).ToHttpResult(Results.Ok);
+                })
+            .DisableAntiforgery()
+            .RequireRateLimiting(RateLimitPolicies.CandidateApply)
+            .Accepts<IFormFile>("multipart/form-data")
+            .WithName("UploadMyResume")
+            .WithSummary("Replace my CV")
+            .WithDescription("Stores a new version of the person's CV (PDF or DOCX, max 10 MB) in every company they applied to, and Criba AI reads it again. Later evaluations use the new version.")
+            .Produces<UploadResumeReceipt>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         me.MapGet("export", async (ClaimsPrincipal user, PortalService service, CancellationToken ct) =>
                 user.Email() is { } email ? Results.Ok(await service.ExportAsync(email, ct)) : NoEmail())
             .WithName("ExportMyData")

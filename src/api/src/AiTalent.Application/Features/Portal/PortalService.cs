@@ -39,12 +39,16 @@ public sealed record PortalApplicationResponse(
     string? InterviewDue,
     IReadOnlyList<PortalHistoryEntry> History);
 
+public sealed record PortalResumeVersion(string FileName, string At);
+
 public sealed record PortalResumeResponse(
     string FileName,
     int SizeKb,
     string UpdatedAt,
+    string Status,
     ResumeDocResponse Doc,
-    IReadOnlyList<string> Skills);
+    IReadOnlyList<string> Skills,
+    IReadOnlyList<PortalResumeVersion> Versions);
 
 /// <summary>
 /// What a person who applied sees: their applications by stage (never scores), their CV and the open
@@ -140,12 +144,15 @@ public sealed class PortalService(ICandidateSideStore store, ICvFileStorage stor
             return Result<PortalResumeResponse>.Failure(ErrorKind.NotFound, "No CV yet.");
         }
 
+        var versions = await store.ListResumeVersionsAsync(email, ct);
         return Result<PortalResumeResponse>.Success(new PortalResumeResponse(
             resume.FileName ?? "hoja_de_vida.pdf",
             (int)Math.Ceiling((resume.SizeBytes ?? 0) / 1024d),
             Dates.Day(resume.CreatedAt)!,
+            resume.ProcessingStatus,
             ResumeDocBuilder.Build(resume.CandidateName, [email], resume.ProfessionalData),
-            ResumeDocBuilder.Skills(resume.ProfessionalData)));
+            ResumeDocBuilder.Skills(resume.ProfessionalData),
+            versions.Select(version => new PortalResumeVersion(version.FileName, Dates.Day(version.CreatedAt)!)).ToList()));
     }
 
     public async Task<Result<CvFile>> GetResumeFileAsync(string email, CancellationToken ct = default)

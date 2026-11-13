@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using AiTalent.Application.Abstractions;
-using AiTalent.Application.Abstractions.AiEngine;
 using AiTalent.Application.Common;
 using AiTalent.Domain.Entities;
 using AiTalent.Domain.Enums;
@@ -33,7 +32,7 @@ public sealed class CandidateApplicationService(
     IAiEngineClient engine,
     IUnitOfWork unitOfWork)
 {
-    private const long MaxFileSizeBytes = 10 * 1024 * 1024;
+    internal const long MaxFileSizeBytes = 10 * 1024 * 1024;
     private const int MaxConcurrencyRetries = 3;
 
     public async Task<Result<CandidateApplicationReceipt>> ApplyAsync(
@@ -267,50 +266,7 @@ public sealed class CandidateApplicationService(
             : Result<Guid>.Failure(ErrorKind.Conflict, "Could not register the candidate. Please try again.");
     }
 
-    private async Task ProcessAsync(Resume resume, CancellationToken ct)
-    {
-        resume.MarkProcessing();
-        try
-        {
-            await unitOfWork.SaveChangesAsync(ct);
-        }
-        catch
-        {
-            // Best effort: proceed to ingestion attempt.
-        }
-
-        try
-        {
-            var response = await engine.IngestCvAsync(new IngestCvRequest(resume.Id), ct);
-            resume.MarkProcessed(response.ExtractorVersion, SerializeProfile(response.ProfessionalData));
-        }
-        catch (Exception ex)
-        {
-            resume.MarkFailed(TruncateError(ex.Message));
-        }
-
-        try
-        {
-            await unitOfWork.SaveChangesAsync(ct);
-        }
-        catch
-        {
-            // Processing status persistence is best-effort; resume remains in latest in-memory state for response.
-        }
-    }
-
-    private static string SerializeProfile(StructuredCandidateProfile? profile)
-    {
-        if (profile is null)
-        {
-            return "{}";
-        }
-
-        return System.Text.Json.JsonSerializer.Serialize(profile, new System.Text.Json.JsonSerializerOptions
-        {
-            PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.SnakeCaseLower,
-        });
-    }
+    private Task ProcessAsync(Resume resume, CancellationToken ct) => ResumeIngestion.ProcessAsync(resume, engine, unitOfWork, ct);
 
     private static string BuildFileKey(Guid companyId, Guid vacancyId, Guid resumeId, string fileName)
     {
@@ -324,7 +280,7 @@ public sealed class CandidateApplicationService(
         return $"{companyId}/{vacancyId}/{resumeId}{ext}";
     }
 
-    private static bool IsAllowedFile(string fileName, string contentType)
+    internal static bool IsAllowedFile(string fileName, string contentType)
     {
         var ext = Path.GetExtension(fileName).ToLowerInvariant();
         var allowedExt = ext is ".pdf" or ".docx";
@@ -344,7 +300,7 @@ public sealed class CandidateApplicationService(
             or "application/octet-stream";
     }
 
-    private static string NormalizeContentType(string contentType, string fileName)
+    internal static string NormalizeContentType(string contentType, string fileName)
     {
         var ext = Path.GetExtension(fileName).ToLowerInvariant();
         if (ext == ".pdf")
@@ -371,13 +327,6 @@ public sealed class CandidateApplicationService(
         {
             return false;
         }
-    }
-
-    private static string TruncateError(string message)
-    {
-        const int max = 500;
-        var clean = message.ReplaceLineEndings(" ").Trim();
-        return clean.Length <= max ? clean : clean[..max];
     }
 
     private static string StatusName(ResumeProcessingStatus status) => status switch

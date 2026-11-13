@@ -14,6 +14,9 @@ internal sealed class CandidateRepository(AppDbContext db) : ICandidateRepositor
     public Task<Candidate?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
         db.Candidates.FirstOrDefaultAsync(candidate => candidate.Id == id, ct);
 
+    public async Task<IReadOnlyList<Candidate>> ListByEmailAsync(string normalizedEmail, CancellationToken ct = default) =>
+        await db.Candidates.Where(candidate => candidate.ContactEmail.ToLower() == normalizedEmail).ToListAsync(ct);
+
     public void Add(Candidate candidate) => db.Candidates.Add(candidate);
 
     public void Remove(Candidate candidate) => db.Candidates.Remove(candidate);
