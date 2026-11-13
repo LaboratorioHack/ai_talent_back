@@ -10,7 +10,8 @@ public sealed class GovernanceService(
     ICompanyRepository companies,
     IEvaluationReadStore evaluations,
     IGovernanceReadStore audit,
-    StaffAccess access)
+    StaffAccess access,
+    TimeProvider clock)
 {
     private static readonly IReadOnlyList<GovernanceAttributeResponse> Attributes =
     [
@@ -26,7 +27,10 @@ public sealed class GovernanceService(
         new("Competencias técnicas", true, "requisitos y equivalencias"),
     ];
 
-    public async Task<Result<GovernanceAuditResponse>> GetAuditAsync(Guid actorUserId, CancellationToken ct = default)
+    /// <summary>Periods the screen offers; anything else is rejected.</summary>
+    public static readonly int[] PeriodDays = [7, 30, 90];
+
+    public async Task<Result<GovernanceAuditResponse>> GetAuditAsync(Guid actorUserId, int days = 30, CancellationToken ct = default)
     {
         var member = await access.GetActiveMemberAsync(actorUserId, ct);
         if (!member.IsSuccess)
@@ -34,11 +38,17 @@ public sealed class GovernanceService(
             return Result<GovernanceAuditResponse>.Failure(member.Error!);
         }
 
+        if (!PeriodDays.Contains(days))
+        {
+            return Result<GovernanceAuditResponse>.Failure(ErrorKind.Invalid, "days must be 7, 30 or 90.");
+        }
+
+        var since = clock.GetUtcNow().AddDays(-days);
         var company = await companies.FindByIdAsync(member.Value!.CompanyId, ct);
-        var evaluationStats = await evaluations.GetGovernanceEvaluationStatsAsync(member.Value.CompanyId, ct);
-        var humanDecisions = await audit.CountHumanDecisionsAsync(member.Value.CompanyId, ct);
-        var aiErrors = await audit.CountAiErrorsFlaggedAsync(member.Value.CompanyId, ct);
-        var entries = await audit.ListForCompanyAsync(member.Value.CompanyId, limit: 120, ct);
+        var evaluationStats = await evaluations.GetGovernanceEvaluationStatsAsync(member.Value.CompanyId, since, ct);
+        var humanDecisions = await audit.CountHumanDecisionsAsync(member.Value.CompanyId, since, ct);
+        var aiErrors = await audit.CountAiErrorsFlaggedAsync(member.Value.CompanyId, since, ct);
+        var entries = await audit.ListForCompanyAsync(member.Value.CompanyId, limit: 120, since, ct);
 
         return Result<GovernanceAuditResponse>.Success(new GovernanceAuditResponse(
             company?.Name ?? "Tu organización",

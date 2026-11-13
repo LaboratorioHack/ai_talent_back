@@ -172,7 +172,7 @@ internal sealed class EvaluationReadStore(AppDbContext db) : IEvaluationReadStor
         }
     }
 
-    public async Task<GovernanceEvaluationStats> GetGovernanceEvaluationStatsAsync(Guid companyId, CancellationToken ct = default)
+    public async Task<GovernanceEvaluationStats> GetGovernanceEvaluationStatsAsync(Guid companyId, DateTimeOffset since, CancellationToken ct = default)
     {
         const string sql = """
             with company_evaluations as (
@@ -183,6 +183,7 @@ internal sealed class EvaluationReadStore(AppDbContext db) : IEvaluationReadStor
               where jo.company_id = @company_id
                 and jo.deleted_at is null
                 and e.processing_status = 'COMPLETED'
+                and e.created_at >= @since
             ),
             requirement_totals as (
               select count(*)::int as total
@@ -212,6 +213,10 @@ internal sealed class EvaluationReadStore(AppDbContext db) : IEvaluationReadStor
             parameter.ParameterName = "company_id";
             parameter.Value = companyId;
             command.Parameters.Add(parameter);
+            var sinceParam = command.CreateParameter();
+            sinceParam.ParameterName = "since";
+            sinceParam.Value = since;
+            command.Parameters.Add(sinceParam);
 
             await using var reader = await command.ExecuteReaderAsync(ct);
             if (!await reader.ReadAsync(ct))

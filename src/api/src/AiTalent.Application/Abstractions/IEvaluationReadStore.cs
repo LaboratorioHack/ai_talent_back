@@ -48,7 +48,7 @@ public interface IEvaluationReadStore
         Guid roleProfileId,
         CancellationToken ct = default);
 
-    Task<GovernanceEvaluationStats> GetGovernanceEvaluationStatsAsync(Guid companyId, CancellationToken ct = default);
+    Task<GovernanceEvaluationStats> GetGovernanceEvaluationStatsAsync(Guid companyId, DateTimeOffset since, CancellationToken ct = default);
 }
 
 public sealed record GovernanceEvaluationStats(
