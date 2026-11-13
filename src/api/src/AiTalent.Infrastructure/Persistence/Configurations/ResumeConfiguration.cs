@@ -16,6 +16,9 @@ internal sealed class ResumeConfiguration : IEntityTypeConfiguration<Resume>
         builder.Property(r => r.Version).HasColumnName("version");
         builder.Property(r => r.FileKey).HasColumnName("file_key");
         builder.Property(r => r.FileHash).HasColumnName("file_hash");
+        builder.Property(r => r.FileName).HasColumnName("file_name");
+        builder.Property(r => r.ContentType).HasColumnName("content_type");
+        builder.Property(r => r.SizeBytes).HasColumnName("size_bytes");
         builder.Property(r => r.ProcessingStatus)
             .HasColumnName("processing_status")
             .HasConversion(

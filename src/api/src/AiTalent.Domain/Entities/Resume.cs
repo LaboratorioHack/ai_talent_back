@@ -10,8 +10,18 @@ public sealed class Resume
         FileKey = string.Empty;
     }
 
-    public Resume(Guid candidateId, int version, string fileKey, string? fileHash)
+    public Resume(
+        Guid candidateId,
+        int version,
+        string fileKey,
+        string? fileHash,
+        string? fileName = null,
+        string? contentType = null,
+        long? sizeBytes = null)
     {
+        FileName = fileName;
+        ContentType = contentType;
+        SizeBytes = sizeBytes;
         Id = Guid.NewGuid();
         CandidateId = candidateId;
         Version = version;
@@ -32,6 +42,13 @@ public sealed class Resume
 
     /// <summary>SHA-256 hash of the file, used to detect duplicates.</summary>
     public string? FileHash { get; private set; }
+
+    /// <summary>Original file name as the candidate uploaded it.</summary>
+    public string? FileName { get; private set; }
+
+    public string? ContentType { get; private set; }
+
+    public long? SizeBytes { get; private set; }
 
     public ResumeProcessingStatus ProcessingStatus { get; private set; }
 

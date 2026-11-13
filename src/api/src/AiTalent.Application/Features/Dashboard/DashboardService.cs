@@ -12,6 +12,7 @@ public sealed class DashboardService(
     ICompanyRepository companies,
     IVacancyInsights insights,
     StaffAccess access,
+    ICandidateSideStore activity,
     TimeProvider clock)
 {
     /// <summary>Same cap as the vacancies list page.</summary>
@@ -35,7 +36,8 @@ public sealed class DashboardService(
             company?.Name ?? string.Empty,
             DashboardBuilder.Vacancies(open, facts, now),
             DashboardBuilder.TopProfiles(open, facts),
-            DashboardBuilder.Pending(open, facts)));
+            DashboardBuilder.Pending(open, facts),
+            await activity.ListAiActivityAsync(companyId, 12, ct)));
     }
 
     public async Task<Result<IReadOnlyList<NavNotice>>> GetNoticesAsync(Actor actor, CancellationToken ct = default)

@@ -13,9 +13,9 @@ public sealed record AuditLogEntry(
 
 public interface IGovernanceReadStore
 {
-    Task<IReadOnlyList<AuditLogEntry>> ListForCompanyAsync(Guid companyId, int limit, CancellationToken ct = default);
+    Task<IReadOnlyList<AuditLogEntry>> ListForCompanyAsync(Guid companyId, int limit, DateTimeOffset since, CancellationToken ct = default);
 
-    Task<int> CountHumanDecisionsAsync(Guid companyId, CancellationToken ct = default);
+    Task<int> CountHumanDecisionsAsync(Guid companyId, DateTimeOffset since, CancellationToken ct = default);
 
-    Task<int> CountAiErrorsFlaggedAsync(Guid companyId, CancellationToken ct = default);
+    Task<int> CountAiErrorsFlaggedAsync(Guid companyId, DateTimeOffset since, CancellationToken ct = default);
 }

@@ -66,7 +66,8 @@ public static class DashboardBuilder
                 fact.ApplicationId,
                 fact.CandidateName,
                 titles[fact.JobOpeningId],
-                (int)Math.Round(fact.TotalScore!.Value, MidpointRounding.AwayFromZero)))
+                (int)Math.Round(fact.TotalScore!.Value, MidpointRounding.AwayFromZero),
+                fact.JobOpeningId))
             .ToList();
     }
 

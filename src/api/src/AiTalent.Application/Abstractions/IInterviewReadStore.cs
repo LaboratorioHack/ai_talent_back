@@ -13,7 +13,10 @@ public sealed record InterviewSnapshot(
     DateTimeOffset? CompletedAt,
     string? Recommendation,
     string? InconsistenciesJson,
-    IReadOnlyList<InterviewTurnSnapshot> Turns);
+    IReadOnlyList<InterviewTurnSnapshot> Turns,
+    Guid ApplicationId = default,
+    Guid VacancyId = default,
+    DateTimeOffset? ExpiresAt = null);
 
 public sealed record InterviewTurnSnapshot(
     int TurnOrder,

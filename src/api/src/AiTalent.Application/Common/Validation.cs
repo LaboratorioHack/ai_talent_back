@@ -32,6 +32,12 @@ internal static class Validation
     public static bool IsOptionalArea(string? value) =>
         string.IsNullOrWhiteSpace(value) || value.Trim().Length is >= 2 and <= MaxAreaLength;
 
+    public static bool IsEmail([NotNullWhen(true)] string? value) =>
+        value is { Length: >= 5 and <= 254 }
+        && value.IndexOf('@') is > 0 and var at
+        && value.IndexOf('.', at) > at + 1
+        && !value.Any(char.IsWhiteSpace);
+
     public static bool IsPositions(int? value) => value is >= 1 and <= MaxPositions;
 
     public static bool IsClosingAt(DateTimeOffset? value) =>

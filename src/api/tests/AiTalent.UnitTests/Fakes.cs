@@ -133,6 +133,9 @@ internal sealed class FakeInviteCodes : IInviteCodes
 
 internal sealed class FakeCandidateRepository : ICandidateRepository
 {
+    public Task<IReadOnlyList<Candidate>> ListByEmailAsync(string normalizedEmail, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<Candidate>>(Candidates.Where(candidate => candidate.ContactEmail == normalizedEmail).ToList());
+
     public List<Candidate> Candidates { get; } = [];
 
     public Task<Candidate?> FindByCompanyAndEmailAsync(Guid companyId, string normalizedEmail, CancellationToken ct = default) =>
@@ -234,6 +237,12 @@ internal sealed class FakeCvFileStorage : ICvFileStorage
         await content.CopyToAsync(ms, ct);
         Uploads.Add((fileKey, contentType, ms.ToArray()));
         return fileKey;
+    }
+
+    public Task<CvFile?> DownloadAsync(string fileKey, CancellationToken ct = default)
+    {
+        var upload = Uploads.LastOrDefault(item => item.Key == fileKey);
+        return Task.FromResult(upload.Bytes is null ? null : new CvFile(upload.Bytes, upload.ContentType));
     }
 }
 

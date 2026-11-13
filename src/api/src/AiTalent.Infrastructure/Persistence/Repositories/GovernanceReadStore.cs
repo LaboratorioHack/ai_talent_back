@@ -5,7 +5,7 @@ namespace AiTalent.Infrastructure.Persistence.Repositories;
 
 internal sealed class GovernanceReadStore(AppDbContext db) : IGovernanceReadStore
 {
-    public async Task<IReadOnlyList<AuditLogEntry>> ListForCompanyAsync(Guid companyId, int limit, CancellationToken ct = default)
+    public async Task<IReadOnlyList<AuditLogEntry>> ListForCompanyAsync(Guid companyId, int limit, DateTimeOffset since, CancellationToken ct = default)
     {
         const string sql = """
             select
@@ -45,6 +45,7 @@ internal sealed class GovernanceReadStore(AppDbContext db) : IGovernanceReadStor
                 )
               )
             )
+              and al.occurred_at >= @since
             order by al.occurred_at desc
             limit @limit
             """;
@@ -62,6 +63,10 @@ internal sealed class GovernanceReadStore(AppDbContext db) : IGovernanceReadStor
             limitParam.ParameterName = "limit";
             limitParam.Value = limit;
             command.Parameters.Add(limitParam);
+            var sinceParam = command.CreateParameter();
+            sinceParam.ParameterName = "since";
+            sinceParam.Value = since;
+            command.Parameters.Add(sinceParam);
 
             var rows = new List<AuditLogEntry>();
             await using var reader = await command.ExecuteReaderAsync(ct);
@@ -87,7 +92,7 @@ internal sealed class GovernanceReadStore(AppDbContext db) : IGovernanceReadStor
         }
     }
 
-    public async Task<int> CountHumanDecisionsAsync(Guid companyId, CancellationToken ct = default)
+    public async Task<int> CountHumanDecisionsAsync(Guid companyId, DateTimeOffset since, CancellationToken ct = default)
     {
         const string sql = """
             select count(*)::int
@@ -95,12 +100,13 @@ internal sealed class GovernanceReadStore(AppDbContext db) : IGovernanceReadStor
             join app.interviewers iv on iv.user_id = al.actor_id
             where iv.company_id = @company_id
               and al.actor_type = 'user'
+              and al.occurred_at >= @since
             """;
 
-        return await ScalarIntAsync(sql, companyId, ct);
+        return await ScalarIntAsync(sql, companyId, since, ct);
     }
 
-    public async Task<int> CountAiErrorsFlaggedAsync(Guid companyId, CancellationToken ct = default)
+    public async Task<int> CountAiErrorsFlaggedAsync(Guid companyId, DateTimeOffset since, CancellationToken ct = default)
     {
         const string sql = """
             select count(*)::int
@@ -113,12 +119,13 @@ internal sealed class GovernanceReadStore(AppDbContext db) : IGovernanceReadStor
                 or al.action ilike '%flagged%'
                 or al.action ilike '%corrected%'
               )
+              and al.occurred_at >= @since
             """;
 
-        return await ScalarIntAsync(sql, companyId, ct);
+        return await ScalarIntAsync(sql, companyId, since, ct);
     }
 
-    private async Task<int> ScalarIntAsync(string sql, Guid companyId, CancellationToken ct)
+    private async Task<int> ScalarIntAsync(string sql, Guid companyId, DateTimeOffset since, CancellationToken ct)
     {
         await db.Database.OpenConnectionAsync(ct);
         try
@@ -129,6 +136,10 @@ internal sealed class GovernanceReadStore(AppDbContext db) : IGovernanceReadStor
             parameter.ParameterName = "company_id";
             parameter.Value = companyId;
             command.Parameters.Add(parameter);
+            var sinceParam = command.CreateParameter();
+            sinceParam.ParameterName = "since";
+            sinceParam.Value = since;
+            command.Parameters.Add(sinceParam);
 
             var value = await command.ExecuteScalarAsync(ct);
             return value is int i ? i : Convert.ToInt32(value);

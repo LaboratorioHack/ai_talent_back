@@ -9,7 +9,6 @@ namespace AiTalent.Application.Features.Rankings;
 public sealed class RankingService(
     IJobOpeningRepository vacancies,
     IEvaluationReadStore evaluations,
-    IAiEngineClient engine,
     StaffAccess access)
 {
     public async Task<Result<IReadOnlyList<RankingSummaryResponse>>> ListSummariesAsync(
@@ -35,7 +34,7 @@ public sealed class RankingService(
                 if (profile is not null)
                 {
                     var snapshots = await evaluations.ListLatestCompletedAsync(row.VacancyId, profile.Id, ct);
-                    var ordered = await OrderWithEngineAsync(profile.Id, snapshots, ct);
+                    var ordered = Order(snapshots);
                     top = ordered
                         .Take(3)
                         .Select(snapshot => new RankingTopEntryResponse(
@@ -82,7 +81,7 @@ public sealed class RankingService(
             }
 
             var requirements = profile.Requirements;
-            var snapshots = await OrderWithEngineAsync(profile.Id, await evaluations.ListLatestCompletedAsync(row.VacancyId, profile.Id, ct), ct);
+            var snapshots = Order(await evaluations.ListLatestCompletedAsync(row.VacancyId, profile.Id, ct));
             foreach (var snapshot in snapshots.Take(6))
             {
                 var mapped = RankingMapping.MapCandidate(snapshot, requirements, 0);
@@ -174,10 +173,7 @@ public sealed class RankingService(
 
         var stats = (await evaluations.ListOpenVacancyStatsAsync(member.Value.CompanyId, ct))
             .FirstOrDefault(row => row.VacancyId == vacancyId);
-        var snapshots = await OrderWithEngineAsync(
-            profile.Id,
-            await evaluations.ListLatestCompletedAsync(vacancyId, profile.Id, ct),
-            ct);
+        var snapshots = Order(await evaluations.ListLatestCompletedAsync(vacancyId, profile.Id, ct));
 
         var candidates = snapshots
             .Select((snapshot, index) => RankingMapping.MapCandidate(snapshot, requirements, index + 1))
@@ -195,37 +191,14 @@ public sealed class RankingService(
             candidates));
     }
 
-    private async Task<IReadOnlyList<VacancyEvaluationSnapshot>> OrderWithEngineAsync(
-        Guid roleProfileId,
-        IReadOnlyList<VacancyEvaluationSnapshot> snapshots,
-        CancellationToken ct)
-    {
-        if (snapshots.Count == 0)
-        {
-            return snapshots;
-        }
-
-        try
-        {
-            var response = await engine.RankCandidatesAsync(
-                new RankCandidatesRequest(roleProfileId, snapshots.Select(snapshot => snapshot.ResumeId).ToList()),
-                ct);
-            var order = response.Ranked.Select(ranked => ranked.ResumeId).ToList();
-            var scoreByResume = response.Ranked.ToDictionary(ranked => ranked.ResumeId, ranked => ranked.TotalScore);
-            return snapshots
-                .OrderBy(snapshot =>
-                {
-                    var index = order.IndexOf(snapshot.ResumeId);
-                    return index < 0 ? int.MaxValue : index;
-                })
-                .Select(snapshot => scoreByResume.TryGetValue(snapshot.ResumeId, out var score)
-                    ? snapshot with { TotalScore = (decimal)score }
-                    : snapshot)
-                .ToList();
-        }
-        catch (Exception)
-        {
-            return snapshots.OrderByDescending(snapshot => snapshot.TotalScore).ToList();
-        }
-    }
+    /// <summary>
+    /// Reading a ranking never calls the AI: it orders the evaluations already stored (disqualified last, then
+    /// score and confidence). Evaluating is the explicit POST /vacancies/{id}/rank, which uses Jev and Claude.
+    /// </summary>
+    internal static IReadOnlyList<VacancyEvaluationSnapshot> Order(IReadOnlyList<VacancyEvaluationSnapshot> snapshots) =>
+        snapshots
+            .OrderBy(snapshot => snapshot.Disqualified)
+            .ThenByDescending(snapshot => snapshot.TotalScore)
+            .ThenByDescending(snapshot => snapshot.Confidence)
+            .ToList();
 }

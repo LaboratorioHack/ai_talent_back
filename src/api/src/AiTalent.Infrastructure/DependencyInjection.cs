@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<IInterviewReadStore, InterviewReadStore>();
         services.AddScoped<IGovernanceReadStore, GovernanceReadStore>();
         services.AddScoped<IVacancyInsights, VacancyInsights>();
+        services.AddScoped<ICandidateSideStore, CandidateSideStore>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IAuditLog, AuditLog>();
         services.AddScoped<ICvFileStorage, CvFileStorage>();
@@ -42,6 +43,7 @@ public static class DependencyInjection
                 "Invites:SigningKey must be at least 32 bytes.")
             .ValidateOnStart();
         services.AddSingleton<IInviteCodes, InviteCodes>();
+        services.AddScoped<IAuthAdmin, SupabaseAuthAdmin>();
 
         services.Configure<AiEngineOptions>(configuration.GetSection(AiEngineOptions.SectionName));
         services.Configure<R2StorageOptions>(configuration.GetSection(R2StorageOptions.SectionName));

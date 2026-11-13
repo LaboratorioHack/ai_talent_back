@@ -11,7 +11,10 @@ public sealed record InterviewResponse(
     int TotalQuestions,
     IReadOnlyList<InterviewTurnResponse> Turns,
     IReadOnlyList<InterviewContrastResponse> Contrasts,
-    string? Recommendation);
+    string? Recommendation,
+    Guid ApplicationId,
+    Guid VacancyId,
+    string? ExpiresAt);
 
 public sealed record CandidateResponse(Guid Id, string Name, string ContactEmail);
 
