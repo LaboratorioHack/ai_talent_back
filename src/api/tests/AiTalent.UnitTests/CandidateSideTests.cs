@@ -87,14 +87,47 @@ public class CandidateSideTests
         var skills = ResumeDocBuilder.Skills(json);
 
         Assert.Equal("Analista de datos", doc.Headline);
-        Assert.Equal(["Perfil", "Experiencia", "Educación", "Certificaciones", "Idiomas", "Habilidades"], doc.Sections.Select(section => section.Title));
-        var role = doc.Sections[1].Lines[0];
+        Assert.Equal(["Perfil", "Educación", "Experiencia", "Habilidades"], doc.Sections.Select(section => section.Title));
+        Assert.Equal(["Técnicas: SQL, Python, dbt", "Idiomas: Inglés B2", "Certificaciones: AWS Data Analytics"], doc.Sections[3].Lines.Select(line => line.Text));
+        var role = doc.Sections[2].Lines[0];
         Assert.Equal("Analista de datos", role.Text);
         Assert.Equal("2021 – hoy", role.Right);
         Assert.Equal("5 años de experiencia", skills[0]);
         Assert.Single(skills, skill => skill.Equals("sql", StringComparison.OrdinalIgnoreCase));
         Assert.Contains("Inglés B2", skills);
         Assert.Contains("dbt", skills);
+    }
+
+    [Fact]
+    public void ResumeDocBuilder_FollowsTheHarvardLayoutWithEverySection()
+    {
+        const string json = """
+            {
+              "headline": "Software Engineering Manager",
+              "summary": "20+ years in broadcast media.",
+              "education": [{"degree": "M.S.", "field": "Computer Science", "start_date": "1992", "end_date": "1994"}],
+              "work_experience": [
+                {"title": "Software Engineering Manager", "company": "Imagine", "start_date": "September 2009", "end_date": "Current",
+                 "highlights": ["a1", "b2", "c3", "d4", "e5", "f6", "g7"], "technologies": ["C++"]},
+                {"title": "Software Engineer", "company": "Company Name", "start_date": "August 1994", "end_date": "July 1997", "highlights": []}
+              ],
+              "projects": [{"name": "Hercules", "description": "MPEG-DASH web service.", "technologies": ["MPEG-DASH"]}],
+              "leadership": ["ScrumMaster since 2014"],
+              "awards": ["Reuse Innovation Award"],
+              "skills": ["MFC"]
+            }
+            """;
+
+        var doc = ResumeDocBuilder.Build("Ana", [], json);
+
+        Assert.Equal("Software Engineering Manager", doc.Headline);
+        Assert.Equal(["Perfil", "Educación", "Experiencia", "Proyectos", "Liderazgo y actividades", "Reconocimientos", "Habilidades"], doc.Sections.Select(section => section.Title));
+        Assert.Equal("1992 – 1994", doc.Sections[1].Lines[0].Right);
+        var experience = doc.Sections[2].Lines;
+        Assert.Equal(["role", "sub", "bullet", "bullet", "bullet", "bullet", "bullet", "bullet", "role"], experience.Select(line => line.Kind));
+        Assert.Equal("Imagine", experience[1].Text);
+        Assert.Equal("Software Engineer", experience[^1].Text);
+        Assert.Equal("Técnicas: MFC, C++, MPEG-DASH", doc.Sections[6].Lines[0].Text);
     }
 
     [Fact]

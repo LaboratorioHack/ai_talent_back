@@ -12,9 +12,10 @@ public class CompanyServiceTests
     private readonly FakeCompanyRepository _companies = new();
     private readonly FakeInviteCodes _codes = new();
     private readonly FakeAuditLog _audit = new();
+    private readonly FakeApplicationRepository _applications = new();
 
     private CompanyService CreateService(bool duplicateKey = false) =>
-        new(_companies, _staff, new StaffAccess(_staff), _codes, _audit, new FakeUnitOfWork(duplicateKey));
+        new(_companies, _staff, _applications, new StaffAccess(_staff), _codes, _audit, new FakeUnitOfWork(duplicateKey));
 
     [Fact]
     public async Task SimultaneousCreateFromSameUserReportsConflict()
@@ -23,6 +24,35 @@ public class CompanyServiceTests
 
         Assert.Equal(ErrorKind.Conflict, result.Error!.Kind);
         Assert.Empty(_audit.Actions);
+    }
+
+    [Fact]
+    public async Task AnApplicantAccountCannotCreateOrJoinACompany()
+    {
+        var userId = Guid.NewGuid();
+        var application = new AiTalent.Domain.Entities.Application(Guid.NewGuid(), Guid.NewGuid(), ApplicationSource.Candidate);
+        application.MarkSubmittedBy(userId);
+        _applications.Applications.Add(application);
+        var service = CreateService();
+
+        var created = await service.CreateAsync(userId, "Acme", "Tecnología", "11-50", "Jane Doe", "jane@example.com");
+        var joined = await service.JoinAsync(userId, "any-code", "Jane Doe", "jane@example.com");
+
+        Assert.Equal(ErrorKind.Forbidden, created.Error!.Kind);
+        Assert.Equal(ErrorKind.Forbidden, joined.Error!.Kind);
+        Assert.Empty(_staff.Members);
+        Assert.Empty(_companies.Companies);
+    }
+
+    [Fact]
+    public async Task ACvUploadedByARecruiterDoesNotMakeThePersonAnApplicantAccount()
+    {
+        var userId = Guid.NewGuid();
+        _applications.Applications.Add(new AiTalent.Domain.Entities.Application(Guid.NewGuid(), Guid.NewGuid(), ApplicationSource.CompanyUpload));
+
+        var created = await CreateService().CreateAsync(userId, "Acme", "Tecnología", "11-50", "Jane Doe", "jane@example.com");
+
+        Assert.True(created.IsSuccess);
     }
 
     [Fact]

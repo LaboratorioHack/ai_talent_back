@@ -10,7 +10,7 @@ internal static class CompanyEndpoints
         var companies = app.MapGroup("/api/companies");
 
         companies.MapPost("", async (CreateCompanyRequest request, ClaimsPrincipal user, CompanyService service, CancellationToken ct) =>
-                (await service.CreateAsync(user.ToUserId(), request.CompanyName, request.Sector, request.Size, request.YourName, ct))
+                (await service.CreateAsync(user.ToUserId(), request.CompanyName, request.Sector, request.Size, request.YourName, user.FindFirstValue("email"), ct))
                 .ToHttpResult(membership => Results.Created($"/api/companies/{membership.CompanyId}", membership.ToResponse())))
             .WithName("CreateCompany")
             .WithSummary("Create a company")
@@ -29,7 +29,7 @@ internal static class CompanyEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden);
 
         companies.MapPost("join", async (JoinCompanyRequest request, ClaimsPrincipal user, CompanyService service, CancellationToken ct) =>
-                (await service.JoinAsync(user.ToUserId(), request.Code, request.YourName, ct))
+                (await service.JoinAsync(user.ToUserId(), request.Code, request.YourName, user.FindFirstValue("email"), ct))
                 .ToHttpResult(membership => Results.Ok(membership.ToResponse())))
             .RequireRateLimiting(RateLimitPolicies.InviteJoin)
             .WithName("JoinCompany")
