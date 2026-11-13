@@ -3,9 +3,15 @@ using AiTalent.Application.Abstractions.AiEngine;
 namespace AiTalent.Application.Abstractions;
 
 /// <summary>Puerto hacia el AI Engine (Python): ingesta, extracción y evaluación de CVs.</summary>
+/// <summary>HTTP status of the engine's readiness call and its JSON body, if any.</summary>
+public sealed record EngineReadiness(int Status, System.Text.Json.JsonElement? Checks);
+
 public interface IAiEngineClient
 {
     Task<bool> IsHealthyAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>The engine's readiness flags (keys present, database, a tiny Claude call); never secret values.</summary>
+    Task<EngineReadiness> GetReadinessAsync(CancellationToken cancellationToken = default);
 
     Task<CvIngestionResponse> IngestCvAsync(IngestCvRequest request, CancellationToken cancellationToken = default);
 
