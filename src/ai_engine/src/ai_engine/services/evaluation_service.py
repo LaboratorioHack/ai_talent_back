@@ -37,6 +37,27 @@ from ai_engine.services.assessment_parsing import as_points, best_citation, pars
 
 logger = logging.getLogger(__name__)
 
+# What the recruiter reads when the fast pass (Jev) settles an evaluation without Claude.
+FAST_PASS_SKIPPED = (
+    "No se revisó en detalle: la lectura rápida ya encontró un requisito obligatorio sin cumplir."
+)
+
+
+def _fast_pass_reason(req_type: str | None, noul: float | None) -> str:
+    """Plain Spanish for a requirement the fast pass decided, with its certainty in percent."""
+    if req_type == "DISQUALIFYING":
+        certainty = round(100 * float(noul if noul is not None else 1.0))
+        return (
+            f"La lectura rápida encontró en la hoja de vida esta condición que descarta "
+            f"(certeza {certainty} %)."
+        )
+    certainty = round(100 * (1 - float(noul if noul is not None else 0.0)))
+    return (
+        f"La lectura rápida no encontró evidencia de este requisito obligatorio "
+        f"(certeza {certainty} %). Pide la evidencia en la entrevista si crees que sí lo cumple."
+    )
+
+
 _FASTPASS_PROMPT = "jev-fastpass-v1"
 
 _PROFILE_DROP_KEYS = frozenset(
@@ -261,8 +282,7 @@ class EvaluationService:
                 else:
                     result, score = "DOES_NOT_MEET", 0.0
                     conf = 1.0 - float(noul or 0.0)
-                noul_label = f"{noul:.2f}" if noul is not None else "n/a"
-                justification = f"Jev fast-pass noul={noul_label} (skipped Claude)"
+                justification = _fast_pass_reason(type_by_key.get(key), noul)
                 gaps.append(
                     {
                         "requirement_id": str(req_id),
@@ -272,7 +292,7 @@ class EvaluationService:
                 )
             else:
                 result, score, conf = "NO_EVIDENCE", 0.0, 0.5
-                justification = "Jev fast-pass did not flag this requirement; Claude skipped."
+                justification = FAST_PASS_SKIPPED
 
             score_inputs.append(
                 RequirementScoreInput(
