@@ -6,6 +6,8 @@ from pydantic import ValidationError
 
 from ai_engine.agents.profile_assistant.agent import ProfileAssistantAgent
 from ai_engine.schemas.role_profile import (
+    DraftVacancyRequest,
+    DraftVacancyResponse,
     Equivalence,
     ExistingRequirement,
     ProposedRequirement,
@@ -13,12 +15,16 @@ from ai_engine.schemas.role_profile import (
     ProposeRequirementsResponse,
     SuggestEquivalencesRequest,
     SuggestEquivalencesResponse,
+    VacancyDraft,
 )
 
 MAX_REQUIREMENTS = 8
 MAX_EQUIVALENCES = 4
 MAX_TEXT = 80
 FULL_WEIGHT = 100
+MAX_DESCRIPTION = 4000
+MAX_OPENINGS = 50
+MAX_CLOSING_DAYS = 365
 
 
 def _clean(text: str) -> str:
@@ -67,6 +73,70 @@ def fit_weights(requirements: list[ProposedRequirement], budget: int) -> None:
         requirement.weight = weight
 
 
+def _pick(value: str | None, options: list[str]) -> str | None:
+    """The option that matches `value` (ignoring case), so the editor's selects can show it."""
+    if not value:
+        return None
+    wanted = _key(value)
+    return next((option for option in options if _key(option) == wanted), None)
+
+
+def _optional(value: str | None) -> str | None:
+    text = _clean(value or "")
+    return text or None
+
+
+def clean_requirements(items: list[ProposedRequirement]) -> list[ProposedRequirement]:
+    known: set[str] = set()
+    requirements: list[ProposedRequirement] = []
+    for item in items:
+        description = _clean(item.description)
+        if not description or _key(description) in known:
+            continue
+        known.add(_key(description))
+        requirements.append(
+            ProposedRequirement(
+                description=description,
+                type=item.type,
+                weight=0 if item.type == "DISQUALIFYING" else item.weight,
+                equivalences=clean_equivalences(item.equivalences, {_key(description)}),
+            )
+        )
+        if len(requirements) == MAX_REQUIREMENTS:
+            break
+    return requirements
+
+
+def clean_draft(draft: VacancyDraft, request: DraftVacancyRequest) -> VacancyDraft:
+    """Keeps the draft inside what the editor and the API accept: fixed lists, 1-50 openings,
+    a future closing date, weights adding up to 100 and at least one mandatory requirement."""
+    requirements = clean_requirements(draft.requirements)
+    if requirements and not any(r.type == "MANDATORY" for r in requirements):
+        first = next((r for r in requirements if r.type == "DESIRABLE"), None)
+        if first is not None:
+            first.type = "MANDATORY"
+    fit_weights(requirements, FULL_WEIGHT)
+
+    closes_at = draft.closes_at
+    if closes_at is not None and not (0 < (closes_at - request.today).days <= MAX_CLOSING_DAYS):
+        closes_at = None
+    openings = draft.openings if draft.openings and 1 <= draft.openings <= MAX_OPENINGS else None
+
+    return VacancyDraft(
+        title=_clean(draft.title),
+        area=_pick(draft.area, request.areas),
+        description=" ".join(draft.description.split(" ")).strip()[:MAX_DESCRIPTION],
+        openings=openings,
+        closes_at=closes_at,
+        location=_optional(draft.location),
+        modality=draft.modality,
+        contract=_pick(draft.contract, request.contracts),
+        schedule=_pick(draft.schedule, request.schedules),
+        salary=_optional(draft.salary),
+        requirements=requirements,
+    )
+
+
 class RoleProfileService:
     def __init__(self, agent: ProfileAssistantAgent | None = None) -> None:
         self._agent = agent or ProfileAssistantAgent()
@@ -99,6 +169,16 @@ class RoleProfileService:
         if budget:
             fit_weights(requirements, budget)
         return ProposeRequirementsResponse(requirements=requirements)
+
+    async def draft_vacancy(self, request: DraftVacancyRequest) -> DraftVacancyResponse:
+        try:
+            draft = await self._agent.draft_vacancy(request)
+        except ValidationError as exc:
+            raise RuntimeError("The AI returned an invalid vacancy draft.") from exc
+        cleaned = clean_draft(draft, request)
+        if not cleaned.title or not cleaned.requirements:
+            raise RuntimeError("The AI could not draft a vacancy from this context.")
+        return DraftVacancyResponse(draft=cleaned)
 
     async def suggest_equivalences(
         self, request: SuggestEquivalencesRequest

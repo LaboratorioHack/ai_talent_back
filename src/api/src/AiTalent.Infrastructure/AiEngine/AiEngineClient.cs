@@ -104,6 +104,14 @@ internal sealed class AiEngineClient(HttpClient httpClient, ILogger<AiEngineClie
             request,
             cancellationToken);
 
+    public Task<DraftVacancyResponse> DraftVacancyAsync(
+        DraftVacancyRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostJsonAsync<DraftVacancyRequest, DraftVacancyResponse>(
+            "v1/role-profiles/draft",
+            request,
+            cancellationToken);
+
     public Task<SuggestEquivalencesResponse> SuggestEquivalencesAsync(
         SuggestEquivalencesRequest request,
         CancellationToken cancellationToken = default) =>

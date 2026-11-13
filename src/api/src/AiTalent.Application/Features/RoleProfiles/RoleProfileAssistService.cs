@@ -11,7 +11,7 @@ public sealed record ExistingRequirementInput(string? Description, string? Type,
 /// AI help for the role-profile editor: proposes requirements from the job description and suggests
 /// equivalences for one requirement. Nothing is saved; the recruiter reviews and saves the profile.
 /// </summary>
-public sealed class RoleProfileAssistService(IAiEngineClient engine, StaffAccess access, IAuditLog audit)
+public sealed class RoleProfileAssistService(IAiEngineClient engine, StaffAccess access, IAuditLog audit, TimeProvider clock)
 {
     public const int MinDescriptionLength = 40;
     public const int MaxDescriptionLength = 4000;
@@ -21,6 +21,9 @@ public sealed class RoleProfileAssistService(IAiEngineClient engine, StaffAccess
     public const int MaxExistingRequirements = 50;
     public const int MaxLabelLength = 80;
     public const int MaxExistingLabels = 20;
+    public const int MinContextLength = 20;
+    public const int MaxContextLength = 8000;
+    public const int MaxOptions = 30;
 
     private static readonly string[] RequirementTypes = ["MANDATORY", "DESIRABLE", "DISQUALIFYING"];
 
@@ -105,6 +108,61 @@ public sealed class RoleProfileAssistService(IAiEngineClient engine, StaffAccess
         return call;
     }
 
+    /// <summary>
+    /// Drafts a whole vacancy (title, area, description, openings, closing date, listing and weighted
+    /// requirements) from free context: a pasted job ad, notes or a few lines. Nothing is saved.
+    /// </summary>
+    public async Task<Result<DraftVacancyResponse>> DraftVacancyAsync(
+        Actor actor,
+        string? context,
+        IReadOnlyList<string>? areas,
+        IReadOnlyList<string>? contracts,
+        IReadOnlyList<string>? schedules,
+        CancellationToken ct = default)
+    {
+        var cleanContext = context?.Trim() ?? string.Empty;
+        if (cleanContext.Length < MinContextLength || cleanContext.Length > MaxContextLength)
+        {
+            return Result<DraftVacancyResponse>.Failure(
+                ErrorKind.Invalid,
+                $"context must be between {MinContextLength} and {MaxContextLength} characters.");
+        }
+
+        var options = new[] { areas, contracts, schedules }.Select(Options).ToList();
+        if (options.Any(list => list is null))
+        {
+            return Result<DraftVacancyResponse>.Failure(
+                ErrorKind.Invalid,
+                $"areas, contracts and schedules allow up to {MaxOptions} options of {MaxLabelLength} characters.");
+        }
+
+        var member = await access.GetActiveMemberAsync(actor.UserId, ct);
+        if (!member.IsSuccess)
+        {
+            return Result<DraftVacancyResponse>.Failure(member.Error!);
+        }
+
+        var today = DateOnly.FromDateTime(Portal.Dates.Local(clock.GetUtcNow()).DateTime);
+        var call = await EngineCall.RunAsync(
+            () => engine.DraftVacancyAsync(new DraftVacancyRequest(cleanContext, today, options[0]!, options[1]!, options[2]!), ct),
+            "The AI engine could not draft a vacancy from this context.",
+            ct);
+        if (!call.IsSuccess)
+        {
+            return call;
+        }
+
+        await audit.RecordAsync(
+            actor.UserId,
+            "role_profile.vacancy_drafted",
+            "company",
+            member.Value!.CompanyId.ToString(),
+            new { contextLength = cleanContext.Length, requirements = call.Value!.Draft.Requirements.Count },
+            ct);
+
+        return call;
+    }
+
     public async Task<Result<SuggestEquivalencesResponse>> SuggestEquivalencesAsync(
         Actor actor,
         string? requirement,
@@ -157,6 +215,13 @@ public sealed class RoleProfileAssistService(IAiEngineClient engine, StaffAccess
             ct);
 
         return call;
+    }
+
+    /// <summary>Trimmed, non-empty options; null when there are too many or one is too long.</summary>
+    private static IReadOnlyList<string>? Options(IReadOnlyList<string>? values)
+    {
+        var clean = (values ?? []).Select(value => value?.Trim() ?? string.Empty).Where(value => value.Length > 0).Distinct().ToList();
+        return clean.Count > MaxOptions || clean.Any(value => value.Length > MaxLabelLength) ? null : clean;
     }
 
     private static (string? Value, bool Invalid) Optional(string? value, int maxLength)
