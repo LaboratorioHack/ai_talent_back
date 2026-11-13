@@ -13,7 +13,7 @@ from ai_engine.core.llm import LlmClient
 from ai_engine.rag.knowledge.taxonomy import transferability
 from ai_engine.rag.retrieval.evidence_retriever import RetrievedEvidence
 
-_PROMPT_VERSION = "evaluator-v1"
+_PROMPT_VERSION = "evaluator-v2"
 
 _SYSTEM = (
     "You are a senior technical recruiter evaluating anonymized CV evidence "
@@ -21,7 +21,15 @@ _SYSTEM = (
     "tenure, and tech transferability. Every assessment MUST cite resume_fragment_id "
     "values from the evidence list. Output JSON with assessments, strengths, gaps, "
     "and reasoning_summary. For DISQUALIFYING requirements, result MEETS only when "
-    "the disqualifying condition is clearly present in evidence."
+    "the disqualifying condition is clearly present in evidence.\n\n"
+    "Return ONLY this JSON object, with one assessment for EVERY requirement:\n"
+    '{"assessments": [{"requirement_id": "<id copied from requirements>", '
+    '"result": "MEETS" | "PARTIALLY_MEETS" | "DOES_NOT_MEET" | "NO_EVIDENCE", '
+    '"score": <number 0-100>, "confidence": <number 0-1>, '
+    '"justification": "<one sentence in Spanish>", "fragment_ids": ["<resume_fragment_id>"]}], '
+    '"strengths": ["<short Spanish phrase>"], "gaps": ["<short Spanish phrase>"], '
+    '"reasoning_summary": "<two sentences in Spanish>"}\n'
+    "Numbers must be JSON numbers, never words like high or low."
 )
 
 
