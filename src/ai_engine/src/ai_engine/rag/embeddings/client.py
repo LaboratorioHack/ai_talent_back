@@ -142,6 +142,17 @@ class EmbeddingsClient:
             msg = f"Embedding models failed: {errors + [str(exc)]}"
             raise RuntimeError(msg) from exc
 
+    async def embed_with_model(self, texts: list[str], model: str) -> EmbeddingBatch:
+        """Embed with one specific model, no fallback: a query must match its corpus' model."""
+        if self._openrouter is None:
+            msg = "OPENROUTER_API_KEY is required for embeddings"
+            raise RuntimeError(msg)
+        primary = model == self._settings.embeddings_model
+        if primary and nvidia_circuit_open():
+            msg = f"{model} is resting after a rate limit"
+            raise RuntimeError(msg)
+        return await self._embed_openrouter(texts, model, "nvidia" if primary else "voyage")
+
     async def _embed_openrouter(
         self,
         texts: list[str],
