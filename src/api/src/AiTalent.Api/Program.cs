@@ -130,6 +130,7 @@ app.MapEvaluationEndpoints();
 app.MapRoleProfileEndpoints();
 app.MapDashboardEndpoints();
 app.MapCandidateSideEndpoints();
+app.MapAssistantEndpoints();
 
 await app.RunAsync();
 

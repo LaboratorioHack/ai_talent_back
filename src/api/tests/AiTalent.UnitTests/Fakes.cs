@@ -248,6 +248,14 @@ internal sealed class FakeCvFileStorage : ICvFileStorage
 
 internal sealed class FakeAiEngineClient : IAiEngineClient
 {
+    public AssistantChatRequest? LastChat { get; private set; }
+
+    public Task<AssistantChatResponse> ChatAsync(AssistantChatRequest request, CancellationToken cancellationToken = default)
+    {
+        LastChat = request;
+        return Task.FromResult(new AssistantChatResponse("Hola, te ayudo."));
+    }
+
     public Task<EngineReadiness> GetReadinessAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult(new EngineReadiness(200, null));
 

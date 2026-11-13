@@ -171,6 +171,7 @@ public sealed class GovernanceService(
             "role_profile.requirements_proposed" => "Pidió a Criba AI proponer requisitos",
             "role_profile.equivalences_suggested" => "Pidió a Criba AI equivalencias",
             "invite_code.created" => "Creó un código de invitación",
+            "assistant.asked" => "Le preguntó a Criba AI",
             _ => TryReadString(detailsJson, "summary") ?? "Registró una acción",
         };
 

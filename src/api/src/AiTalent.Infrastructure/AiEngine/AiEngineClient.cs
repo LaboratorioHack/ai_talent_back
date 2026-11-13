@@ -112,6 +112,14 @@ internal sealed class AiEngineClient(HttpClient httpClient, ILogger<AiEngineClie
             request,
             cancellationToken);
 
+    public Task<AssistantChatResponse> ChatAsync(
+        AssistantChatRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostJsonAsync<AssistantChatRequest, AssistantChatResponse>(
+            "v1/assistant/chat",
+            request,
+            cancellationToken);
+
     private async Task<TResponse> PostJsonAsync<TRequest, TResponse>(
         string relativeUrl,
         TRequest body,

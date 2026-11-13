@@ -1,3 +1,4 @@
+using AiTalent.Application.Features.Assistant;
 using AiTalent.Application.Features.Auth;
 using AiTalent.Application.Features.Candidates;
 using AiTalent.Application.Features.Companies;
@@ -36,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<RoleProfileAssistService>();
         services.AddScoped<DashboardService>();
         services.AddScoped<PortalService>();
+        services.AddScoped<AssistantService>();
         services.AddScoped<CandidateInterviewService>();
         services.AddScoped<ApplicationActionsService>();
         services.AddScoped<ApplicantResumeService>();

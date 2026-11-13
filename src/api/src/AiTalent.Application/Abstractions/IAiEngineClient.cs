@@ -35,6 +35,8 @@ public interface IAiEngineClient
         ProposeRequirementsRequest request,
         CancellationToken cancellationToken = default);
 
+    Task<AssistantChatResponse> ChatAsync(AssistantChatRequest request, CancellationToken cancellationToken = default);
+
     Task<SuggestEquivalencesResponse> SuggestEquivalencesAsync(
         SuggestEquivalencesRequest request,
         CancellationToken cancellationToken = default);

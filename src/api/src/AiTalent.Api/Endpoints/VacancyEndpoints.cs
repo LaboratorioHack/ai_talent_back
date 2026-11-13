@@ -296,6 +296,7 @@ internal static class VacancyEndpoints
         vacancies.MapPost("{id:guid}/applications", async (
                 Guid id,
                 HttpRequest request,
+                ClaimsPrincipal user,
                 CandidateApplicationService service,
                 CancellationToken ct) =>
             {
@@ -328,7 +329,9 @@ internal static class VacancyEndpoints
                         file.FileName,
                         file.ContentType,
                         file.Length,
-                        file.OpenReadStream),
+                        file.OpenReadStream,
+                        // Signed in (optional here): the portal will show it even if the e-mail differs.
+                        user.Identity?.IsAuthenticated == true ? user.ToUserId() : null),
                     ct);
 
                 return result.ToHttpResult(receipt => Results.Created(
