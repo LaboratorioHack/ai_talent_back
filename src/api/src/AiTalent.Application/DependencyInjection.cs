@@ -6,6 +6,7 @@ using AiTalent.Application.Features.Interviews;
 using AiTalent.Application.Features.Rankings;
 using AiTalent.Application.Features.Dashboard;
 using AiTalent.Application.Features.Evaluations;
+using AiTalent.Application.Features.RoleProfiles;
 using AiTalent.Application.Features.Staff;
 using AiTalent.Application.Features.Vacancies;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,6 +32,7 @@ public static class DependencyInjection
         services.AddScoped<GovernanceService>();
         services.AddScoped<ApplicationStageService>();
         services.AddScoped<EvaluationService>();
+        services.AddScoped<RoleProfileAssistService>();
         services.AddScoped<DashboardService>();
         services.TryAddSingleton(TimeProvider.System);
         return services;

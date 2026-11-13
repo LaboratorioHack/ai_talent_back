@@ -332,6 +332,36 @@ internal sealed class FakeAiEngineClient : IAiEngineClient
             "Depth versus breadth.",
             []));
     }
+
+    public List<ProposeRequirementsRequest> ProposeRequests { get; } = [];
+    public List<SuggestEquivalencesRequest> EquivalenceRequests { get; } = [];
+    public Exception? ThrowOnAssist { get; set; }
+
+    public Task<ProposeRequirementsResponse> ProposeRequirementsAsync(ProposeRequirementsRequest request, CancellationToken cancellationToken = default)
+    {
+        ProposeRequests.Add(request);
+        if (ThrowOnAssist is not null)
+        {
+            throw ThrowOnAssist;
+        }
+
+        return Task.FromResult(new ProposeRequirementsResponse(
+        [
+            new ProposedRequirementDto("Unity", "MANDATORY", 60, [new EquivalenceDto("Unreal Engine", 70)]),
+            new ProposedRequirementDto("Shaders", "DESIRABLE", 40, []),
+        ]));
+    }
+
+    public Task<SuggestEquivalencesResponse> SuggestEquivalencesAsync(SuggestEquivalencesRequest request, CancellationToken cancellationToken = default)
+    {
+        EquivalenceRequests.Add(request);
+        if (ThrowOnAssist is not null)
+        {
+            throw ThrowOnAssist;
+        }
+
+        return Task.FromResult(new SuggestEquivalencesResponse([new EquivalenceDto("C++", 70)]));
+    }
 }
 
 internal sealed class FakeVacancyInsights : IVacancyInsights

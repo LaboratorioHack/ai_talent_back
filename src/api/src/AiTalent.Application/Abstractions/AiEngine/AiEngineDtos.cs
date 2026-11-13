@@ -110,3 +110,30 @@ public sealed record CompareCandidatesResponse(
     IReadOnlyList<SideBySideCandidateDto> SideBySideMatrix,
     string HeadToHeadTradeOff,
     IReadOnlyList<InterviewFocusDto> RecommendedInterviewFocus);
+
+public sealed record EquivalenceDto(string Label, int Percent);
+
+/// <summary>Type is MANDATORY, DESIRABLE or DISQUALIFYING.</summary>
+public sealed record ExistingRequirementDto(string Description, string Type, int Weight);
+
+public sealed record ProposeRequirementsRequest(
+    string Description,
+    string? Title,
+    string? Area,
+    IReadOnlyList<ExistingRequirementDto> Existing);
+
+public sealed record ProposedRequirementDto(
+    string Description,
+    string Type,
+    int Weight,
+    IReadOnlyList<EquivalenceDto> Equivalences);
+
+public sealed record ProposeRequirementsResponse(IReadOnlyList<ProposedRequirementDto> Requirements);
+
+public sealed record SuggestEquivalencesRequest(
+    string Requirement,
+    string? Title,
+    string? Description,
+    IReadOnlyList<string> Existing);
+
+public sealed record SuggestEquivalencesResponse(IReadOnlyList<EquivalenceDto> Equivalences);

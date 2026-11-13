@@ -145,3 +145,17 @@ internal sealed record RankApplicationsRequest(IReadOnlyList<Guid>? ApplicationI
 internal sealed record CompareApplicationsRequest(IReadOnlyList<Guid>? ApplicationIds);
 
 internal sealed record EvidenceSearchApiRequest(string? Query, int? Limit);
+
+internal sealed record ExistingRequirementApiRequest(string? Description, string? Type, decimal? Weight);
+
+internal sealed record ProposeRequirementsApiRequest(
+    string? Description,
+    string? Title,
+    string? Area,
+    IReadOnlyList<ExistingRequirementApiRequest>? Existing);
+
+internal sealed record SuggestEquivalencesApiRequest(
+    string? Requirement,
+    string? Title,
+    string? Description,
+    IReadOnlyList<string>? Existing);
