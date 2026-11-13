@@ -24,6 +24,7 @@ internal sealed class ApplicationConfiguration : IEntityTypeConfiguration<Applic
             .HasConversion(
                 status => status.ToString().ToUpperInvariant(),
                 value => Enum.Parse<ApplicationSelectionStatus>(value, ignoreCase: true));
+        builder.Property(a => a.SubmittedBy).HasColumnName("submitted_by");
         builder.Property(a => a.CreatedAt).HasColumnName("created_at");
         builder.Property(a => a.UpdatedAt).HasColumnName("updated_at");
     }
