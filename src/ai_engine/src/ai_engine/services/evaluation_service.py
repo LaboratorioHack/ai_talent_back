@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from typing import Any
@@ -32,7 +33,7 @@ from ai_engine.schemas.evaluation import (
     RequirementAssessment,
 )
 from ai_engine.scoring.calculator import RequirementScoreInput, compute_scores
-from ai_engine.services.assessment_parsing import as_points, parse_assessments
+from ai_engine.services.assessment_parsing import as_points, best_citation, parse_assessments
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +127,11 @@ class EvaluationService:
                         EvidenceChunk(
                             fragment_id=chunk.fragment_id,
                             section=chunk.section,
-                            citation=chunk.citation,
+                            citation=best_citation(
+                                chunk.citation,
+                                parsed.quote,
+                                str(req_row.get("condition") or req_row.get("description") or ""),
+                            ),
                             page_number=chunk.page_number,
                             similarity=chunk.similarity,
                         )
@@ -346,36 +351,44 @@ class EvaluationService:
         )
 
     async def rank(self, request: RankCandidatesRequest) -> RankCandidatesResponse:
-        ranked: list[RankedCandidate] = []
-        for resume_id in request.resume_ids:
-            resume = await repositories.get_resume(resume_id)
-            if resume is None:
-                continue
-            eval_req = EvaluateRequest(
-                role_profile_id=request.role_profile_id,
-                resume_id=resume_id,
-                candidate_id=resume["candidate_id"],
-                job_opening_id=None,
-            )
-            profile = await repositories.get_role_profile(request.role_profile_id)
-            if profile:
-                eval_req.job_opening_id = profile["job_opening_id"]
-            try:
-                result = await self.evaluate(eval_req)
-            except (ValueError, RuntimeError):
-                continue
-            ranked.append(
-                RankedCandidate(
-                    resume_id=resume_id,
-                    evaluation_id=result.evaluation_id,
-                    total_score=result.total_score,
-                    confidence=result.confidence,
-                    fulfillment=result.fulfillment,
-                    recommend_interview=result.recommend_interview,
-                )
-            )
+        # CVs are independent: evaluate a few at a time instead of one after another.
+        gate = asyncio.Semaphore(max(1, get_settings().rank_concurrency))
+        profile = await repositories.get_role_profile(request.role_profile_id)
+        job_opening_id = profile["job_opening_id"] if profile else None
+
+        async def one(resume_id: uuid.UUID) -> RankedCandidate | None:
+            async with gate:
+                return await self._rank_one(request.role_profile_id, resume_id, job_opening_id)
+
+        results = await asyncio.gather(*(one(resume_id) for resume_id in request.resume_ids))
+        ranked = [candidate for candidate in results if candidate is not None]
         ranked.sort(key=lambda r: (r.total_score, r.confidence), reverse=True)
         return RankCandidatesResponse(role_profile_id=request.role_profile_id, ranked=ranked)
+
+    async def _rank_one(
+        self, role_profile_id: uuid.UUID, resume_id: uuid.UUID, job_opening_id: uuid.UUID | None
+    ) -> RankedCandidate | None:
+        resume = await repositories.get_resume(resume_id)
+        if resume is None:
+            return None
+        eval_req = EvaluateRequest(
+            role_profile_id=role_profile_id,
+            resume_id=resume_id,
+            candidate_id=resume["candidate_id"],
+            job_opening_id=job_opening_id,
+        )
+        try:
+            result = await self.evaluate(eval_req)
+        except (ValueError, RuntimeError):
+            return None
+        return RankedCandidate(
+            resume_id=resume_id,
+            evaluation_id=result.evaluation_id,
+            total_score=result.total_score,
+            confidence=result.confidence,
+            fulfillment=result.fulfillment,
+            recommend_interview=result.recommend_interview,
+        )
 
     async def compare(self, request: CompareCandidatesRequest) -> CompareCandidatesResponse:
         resume_ids = list(request.resume_ids)

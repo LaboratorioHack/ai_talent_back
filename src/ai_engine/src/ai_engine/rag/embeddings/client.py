@@ -27,6 +27,9 @@ logger = logging.getLogger(__name__)
 _EMBED_ATTEMPTS = 4  # 1 try + 3 retries, then Voyage
 _429_FLOORS = (5.0, 10.0, 15.0)
 _NVIDIA_CIRCUIT_SECONDS = 60.0
+# A daily quota (OpenRouter free models: "free-models-per-day") will not recover in a minute:
+# retrying it only delays every embedding by the 5/10/15 s floors before Voyage answers.
+_DAILY_QUOTA_CIRCUIT_SECONDS = 3600.0
 
 _nvidia_circuit_until = 0.0
 _nvidia_circuit_logged = False
@@ -52,7 +55,14 @@ def is_embedding_rate_limit(exc: BaseException) -> bool:
     return _message_looks_like_rate_limit(exc)
 
 
+def is_daily_quota(exc: BaseException) -> bool:
+    text = str(exc).lower()
+    return "per-day" in text or "per day" in text
+
+
 def is_retryable_embedding_error(exc: BaseException) -> bool:
+    if is_daily_quota(exc):
+        return False
     if isinstance(exc, RateLimitError | APITimeoutError | APIConnectionError):
         return True
     if isinstance(exc, APIStatusError):
@@ -74,9 +84,9 @@ def nvidia_circuit_open() -> bool:
     return True
 
 
-def trip_nvidia_circuit() -> None:
+def trip_nvidia_circuit(seconds: float = _NVIDIA_CIRCUIT_SECONDS) -> None:
     global _nvidia_circuit_until, _nvidia_circuit_logged
-    _nvidia_circuit_until = time.monotonic() + _NVIDIA_CIRCUIT_SECONDS
+    _nvidia_circuit_until = time.monotonic() + seconds
     if not _nvidia_circuit_logged:
         logger.warning("Nvidia embedding circuit open (429); using Voyage fallback")
         _nvidia_circuit_logged = True
@@ -116,7 +126,11 @@ class EmbeddingsClient:
                 )
                 errors.append(str(exc))
                 if is_embedding_rate_limit(exc):
-                    trip_nvidia_circuit()
+                    trip_nvidia_circuit(
+                        _DAILY_QUOTA_CIRCUIT_SECONDS
+                        if is_daily_quota(exc)
+                        else _NVIDIA_CIRCUIT_SECONDS
+                    )
 
         try:
             return await self._embed_openrouter(
@@ -127,6 +141,17 @@ class EmbeddingsClient:
         except Exception as exc:  # noqa: BLE001
             msg = f"Embedding models failed: {errors + [str(exc)]}"
             raise RuntimeError(msg) from exc
+
+    async def embed_with_model(self, texts: list[str], model: str) -> EmbeddingBatch:
+        """Embed with one specific model, no fallback: a query must match its corpus' model."""
+        if self._openrouter is None:
+            msg = "OPENROUTER_API_KEY is required for embeddings"
+            raise RuntimeError(msg)
+        primary = model == self._settings.embeddings_model
+        if primary and nvidia_circuit_open():
+            msg = f"{model} is resting after a rate limit"
+            raise RuntimeError(msg)
+        return await self._embed_openrouter(texts, model, "nvidia" if primary else "voyage")
 
     async def _embed_openrouter(
         self,

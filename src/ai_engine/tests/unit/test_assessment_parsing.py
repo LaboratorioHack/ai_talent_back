@@ -8,6 +8,7 @@ from ai_engine.services.assessment_parsing import (
     as_points,
     as_result,
     as_score,
+    best_citation,
     parse_assessments,
 )
 
@@ -100,3 +101,35 @@ def test_points_turn_strings_into_objects_and_drop_noise():
         {"description": "AKS"},
     ]
     assert as_points("no es lista") == []
+
+
+CHUNK = (
+    "[CANDIDATE] Ingeniera de Confiabilidad (SRE) · Medellín · [EMAIL]\n"
+    "PERFIL Ingeniera de sistemas con 6 años en operación de plataformas en la nube.\n"
+    "Administro 14 clústeres de Kubernetes (EKS) con Terraform y Helm.\n"
+    "Pipelines de CI/CD en GitHub Actions y Argo CD para 25 repositorios.\n"
+)
+
+
+def test_best_citation_keeps_a_verbatim_quote() -> None:
+    quote = "Pipelines de CI/CD en GitHub Actions y Argo CD"
+    assert best_citation(CHUNK, quote, "Automatización de despliegues") == quote
+
+
+def test_best_citation_ignores_an_invented_quote_and_picks_the_line() -> None:
+    cited = best_citation(
+        CHUNK, "Diseñó la plataforma de Kubernetes de toda la empresa", "Kubernetes y Terraform"
+    )
+    assert cited.startswith("Administro 14 clústeres de Kubernetes")
+
+
+def test_best_citation_falls_back_to_the_fragment_start() -> None:
+    assert best_citation(CHUNK, "", "COBOL mainframe").startswith("[CANDIDATE]")
+
+
+def test_parse_assessments_reads_the_quote() -> None:
+    req = uuid.uuid4()
+    [parsed] = parse_assessments(
+        [{"requirement_id": str(req), "result": "MEETS", "quote": " línea "}], [req]
+    )
+    assert parsed.quote == "línea"

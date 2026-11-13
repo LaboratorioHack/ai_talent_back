@@ -8,6 +8,8 @@ save an evaluation with no requirement results).
 
 from __future__ import annotations
 
+import re
+import unicodedata
 import uuid
 from dataclasses import dataclass, field
 from typing import Any
@@ -94,6 +96,7 @@ class ParsedAssessment:
     justification: str
     fragment_ids: list[uuid.UUID] = field(default_factory=list)
     missing: bool = False
+    quote: str = ""
 
 
 def parse_assessments(raw: Any, requirement_ids: list[uuid.UUID]) -> list[ParsedAssessment]:
@@ -117,9 +120,68 @@ def parse_assessments(raw: Any, requirement_ids: list[uuid.UUID]) -> list[Parsed
             fragment_ids=[
                 f for f in (as_uuid(x) for x in item.get("fragment_ids") or []) if f is not None
             ],
+            quote=str(item.get("quote") or "").strip(),
         )
     return [
         by_id.get(req_id)
         or ParsedAssessment(req_id, "NO_EVIDENCE", 0.0, 0.3, MISSING_JUSTIFICATION, missing=True)
         for req_id in requirement_ids
     ]
+
+
+_STOPWORDS = {
+    "para",
+    "como",
+    "con",
+    "del",
+    "los",
+    "las",
+    "una",
+    "uno",
+    "que",
+    "por",
+    "sus",
+    "desde",
+    "with",
+    "and",
+    "the",
+    "for",
+    "from",
+    "experiencia",
+    "conocimiento",
+    "manejo",
+    "años",
+}
+
+
+def _words(text: str) -> set[str]:
+    folded = unicodedata.normalize("NFKD", text.lower())
+    plain = "".join(c for c in folded if not unicodedata.combining(c))
+    return {w for w in re.findall(r"[a-z0-9+#]{3,}", plain) if w not in _STOPWORDS}
+
+
+def _lines(chunk: str) -> list[str]:
+    parts = re.split(r"\n+|(?<=[.;!?])\s+|\s+[·•]\s+", chunk)
+    return [" ".join(p.split()) for p in parts if len(p.split()) >= 3]
+
+
+def best_citation(chunk: str, quote: str, requirement: str, *, limit: int = 280) -> str:
+    """The line of the fragment that proves the requirement, not the start of the fragment.
+
+    Prefers the model's ``quote`` when it really is in the fragment (so it cannot invent one);
+    otherwise picks the line that shares the most words with the quote and the requirement.
+    """
+    flat = " ".join(chunk.split())
+    wanted = " ".join(quote.split())
+    if len(wanted) >= 12:
+        at = flat.lower().find(wanted.lower())
+        if at >= 0:
+            return flat[at : at + len(wanted)][:limit]
+    lines = _lines(chunk)
+    if not lines:
+        return flat[:limit]
+    target = _words(f"{quote} {requirement}")
+    best = max(lines, key=lambda line: (len(_words(line) & target), -lines.index(line)))
+    if not _words(best) & target:
+        return flat[:limit]
+    return best[:limit]

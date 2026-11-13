@@ -23,6 +23,8 @@ class Settings(BaseSettings):
 
     # Jev (TypeSafe System One) via OpenRouter Decisions API — same OPENROUTER_API_KEY
     jev_model_id: str = "typesafe/jev-1.14"
+    # CVs evaluated at the same time when ranking a vacancy (each one is a Claude call).
+    rank_concurrency: int = 3
     jev_decisions_url: str = "https://openrouter.ai/api/alpha/decisions"
     jev_noul_yes: float = 0.80
     jev_noul_no: float = 0.20

@@ -19,6 +19,7 @@ internal sealed class SmtpEmailSender(IOptions<SmtpOptions> options, ILogger<Smt
 
         if (!_options.IsConfigured)
         {
+            logger.LogWarning("Email to {Recipient} skipped: SMTP is not configured", MaskEmail(message.To));
             throw new InvalidOperationException(
                 "SMTP is not configured. Set Smtp__Username, Smtp__Password and Smtp__FromAddress.");
         }
@@ -30,10 +31,19 @@ internal sealed class SmtpEmailSender(IOptions<SmtpOptions> options, ILogger<Smt
             ? SecureSocketOptions.SslOnConnect
             : _options.UseStartTls ? SecureSocketOptions.StartTls : SecureSocketOptions.Auto;
 
-        await client.ConnectAsync(_options.Host, _options.Port, security, ct);
-        await client.AuthenticateAsync(_options.Username, _options.Password, ct);
-        await client.SendAsync(new SendRequest(mime), ct);
-        await client.DisconnectAsync(quit: true, ct);
+        try
+        {
+            await client.ConnectAsync(_options.Host, _options.Port, security, ct);
+            await client.AuthenticateAsync(_options.Username, _options.Password, ct);
+            await client.SendAsync(new SendRequest(mime), ct);
+            await client.DisconnectAsync(quit: true, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Callers decide whether a failed e-mail matters; the reason must still be visible to operators.
+            logger.LogWarning(ex, "Email to {Recipient} via {Host}:{Port} failed: {Reason}", MaskEmail(message.To), _options.Host, _options.Port, ex.Message);
+            throw;
+        }
 
         // OWASP A09: log the event, never the body or credentials.
         logger.LogInformation("Email sent to {Recipient} with subject {Subject}", MaskEmail(message.To), message.Subject);
