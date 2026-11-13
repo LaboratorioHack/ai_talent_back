@@ -474,8 +474,16 @@ for index, (vkey, name, aid, eid, days) in enumerate(interviews):
     started = max(0.2, days - 5)
     reqs = [k for k in vacancy_info[vkey]["reqs"] if R[k][0] != "DISQUALIFYING"][:5]
     contrasts = (
-        [{"label": "Servicios migrados", "cvSays": "30 servicios a Azure", "interviewSays": "Dijo 32, con 4 en curso", "verdict": "match"},
-         {"label": "Inglés", "cvSays": "B2", "interviewSays": "Respondió en inglés con fluidez", "verdict": "match"}]
+        {
+            "cloud": [
+                {"label": "Servicios migrados", "cvSays": "30 servicios a Azure", "interviewSays": "Dijo 32, con 4 en curso", "verdict": "match"},
+                {"label": "Inglés", "cvSays": "B2", "interviewSays": "Respondió en inglés con fluidez", "verdict": "match"},
+            ],
+            "data": [
+                {"label": "Tableros", "cvSays": "Doce tableros en Power BI", "interviewSays": "Habló de diez, dos en construcción", "verdict": "match"},
+                {"label": "dbt", "cvSays": "Lo conoce por un curso", "interviewSays": "Dijo usarlo a diario", "verdict": "conflict"},
+            ],
+        }.get(vkey)
         if done else None
     )
     emit(
@@ -487,7 +495,8 @@ for index, (vkey, name, aid, eid, days) in enumerate(interviews):
     for order, rkey in enumerate(reqs, start=1):
         desc = R[rkey][3]
         question = f"Sobre «{desc}»: cuéntame el proyecto más exigente en el que lo aplicaste y cuál fue tu papel."
-        answer = (R[rkey][5] or R[rkey][6] or "Lo usé en mi trabajo actual.").format(y=4) + " Fue un trabajo en equipo y yo lideré la parte técnica." if done else None
+        closing = ["Yo lideré la parte técnica.", "Lo documenté para el equipo.", "Medimos el resultado cada mes.", "Lo hice con otra persona del equipo.", "Fue mi primer proyecto en ese cargo."][order % 5]
+        answer = f"{(R[rkey][5] or R[rkey][6] or 'Lo usé en mi trabajo actual.').format(y=4)} {closing}" if done else None
         emit(
             "insert into app.interview_turns (interview_id, turn_order, topic, question, answer, answer_evaluation) values ("
             f"{q(iid)}, {order}, {q(R[rkey][2])}, {q(question)}, {q(answer)}, {q('match' if done else None)});"
