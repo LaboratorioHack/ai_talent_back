@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using AiTalent.Application.Features.Assistant;
 using AiTalent.Application.Features.Candidates;
 using AiTalent.Application.Features.Interviews;
 using AiTalent.Application.Features.Portal;
@@ -67,6 +68,17 @@ internal static class CandidateSideEndpoints
         //     .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         var me = app.MapGroup("/api/me");
+
+        me.MapPost("assistant/chat", async (AssistantChatApiRequest request, ClaimsPrincipal user, AssistantService service, CancellationToken ct) =>
+                user.Email() is { } email
+                    ? (await service.AskAsApplicantAsync(user.ToUserId(), email, user.SessionName(), request.Messages, ct)).ToHttpResult(Results.Ok)
+                    : NoEmail())
+            .WithName("AskAssistantAsApplicant")
+            .WithSummary("Chat with Criba AI (applicant)")
+            .WithDescription("Criba AI answers the last user message using only the applicant's own applications, résumé and open jobs. 1–20 messages, the last one from the user. The question is audited, not its text.")
+            .Produces<AssistantReply>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         me.MapGet("applicant", async (ClaimsPrincipal user, PortalService service, CancellationToken ct) =>
                 user.Email() is { } email ? Results.Ok(await service.GetApplicantAsync(email, user.SessionName(), ct)) : NoEmail())

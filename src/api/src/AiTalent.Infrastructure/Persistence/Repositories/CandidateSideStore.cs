@@ -71,7 +71,8 @@ internal sealed class CandidateSideStore(AppDbContext db) : ICandidateSideStore
               order by iv.created_at desc
               limit 1
             ) i on true
-            where lower(c.contact_email) = lower({email})
+            -- The session e-mail, plus what this user sent signed in with another e-mail.
+            where (lower(c.contact_email) = lower({email}) or a.submitted_by in (select u.id from auth.users u where lower(u.email) = lower({email})))
               and jo.deleted_at is null
             order by a.updated_at desc
             """).ToListAsync(ct);
@@ -91,6 +92,7 @@ internal sealed class CandidateSideStore(AppDbContext db) : ICandidateSideStore
             from app.resumes r
             join app.candidates c on c.id = r.candidate_id
             where lower(c.contact_email) = lower({email})
+               or exists (select 1 from app.applications sa where sa.candidate_id = c.id and sa.submitted_by in (select u.id from auth.users u where lower(u.email) = lower({email})))
             order by r.created_at desc
             limit 1
             """).ToListAsync(ct);
@@ -120,7 +122,7 @@ internal sealed class CandidateSideStore(AppDbContext db) : ICandidateSideStore
             from app.candidates c
             where c.id = a.candidate_id
               and a.id = {applicationId}
-              and lower(c.contact_email) = lower({email})
+              and (lower(c.contact_email) = lower({email}) or a.submitted_by in (select u.id from auth.users u where lower(u.email) = lower({email})))
               and a.selection_status in ('APPLIED', 'SHORTLISTED', 'INTERVIEW')
             """, ct);
 

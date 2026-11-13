@@ -14,7 +14,8 @@ public sealed record ApplyToVacancyCommand(
     string FileName,
     string ContentType,
     long Length,
-    Func<Stream> OpenReadStream);
+    Func<Stream> OpenReadStream,
+    Guid? SubmittedBy = null);
 
 public sealed record CandidateApplicationReceipt(
     Guid ApplicationId,
@@ -127,6 +128,7 @@ public sealed class CandidateApplicationService(
 
             var resume = new Resume(candidateId, version, fileKey, hash, Path.GetFileName(command.FileName), contentType, bytes.LongLength);
             var application = new Domain.Entities.Application(vacancy.Id, candidateId, ApplicationSource.Candidate);
+            application.MarkSubmittedBy(command.SubmittedBy);
             resumes.Add(resume);
             applications.Add(application);
 

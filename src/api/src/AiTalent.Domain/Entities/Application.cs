@@ -30,6 +30,11 @@ public sealed class Application
 
     public ApplicationSelectionStatus SelectionStatus { get; private set; }
 
+    /// <summary>Supabase Auth user who sent it while signed in; null for anonymous applications.</summary>
+    public Guid? SubmittedBy { get; private set; }
+
+    public void MarkSubmittedBy(Guid? userId) => SubmittedBy ??= userId;
+
     public DateTimeOffset CreatedAt { get; private set; }
 
     public DateTimeOffset UpdatedAt { get; private set; }

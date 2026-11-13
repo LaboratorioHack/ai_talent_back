@@ -137,3 +137,11 @@ public sealed record SuggestEquivalencesRequest(
     IReadOnlyList<string> Existing);
 
 public sealed record SuggestEquivalencesResponse(IReadOnlyList<EquivalenceDto> Equivalences);
+
+/// <summary>One turn of the Criba AI chat: <c>user</c> or <c>assistant</c>.</summary>
+public sealed record AssistantTurnDto(string Role, string Content);
+
+/// <summary>Who asks (<c>company</c> or <c>applicant</c>), what they may see, and the conversation.</summary>
+public sealed record AssistantChatRequest(string Audience, object Context, IReadOnlyList<AssistantTurnDto> Messages);
+
+public sealed record AssistantChatResponse(string Reply);
