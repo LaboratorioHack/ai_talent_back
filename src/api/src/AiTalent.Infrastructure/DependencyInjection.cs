@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<IInterviewReadStore, InterviewReadStore>();
         services.AddScoped<IGovernanceReadStore, GovernanceReadStore>();
         services.AddScoped<IVacancyInsights, VacancyInsights>();
+        services.AddScoped<ICandidateSideStore, CandidateSideStore>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IAuditLog, AuditLog>();
         services.AddScoped<ICvFileStorage, CvFileStorage>();

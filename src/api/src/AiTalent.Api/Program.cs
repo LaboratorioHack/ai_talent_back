@@ -129,6 +129,7 @@ app.MapGovernanceEndpoints();
 app.MapEvaluationEndpoints();
 app.MapRoleProfileEndpoints();
 app.MapDashboardEndpoints();
+app.MapCandidateSideEndpoints();
 
 await app.RunAsync();
 

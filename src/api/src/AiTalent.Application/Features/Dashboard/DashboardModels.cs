@@ -24,7 +24,8 @@ public sealed record DashboardData(
     string Organization,
     IReadOnlyList<DashboardVacancy> Vacancies,
     IReadOnlyList<TopProfile> TopProfiles,
-    IReadOnlyList<PendingItem> Pending);
+    IReadOnlyList<PendingItem> Pending,
+    IReadOnlyList<AiTalent.Application.Abstractions.AiActivityRow> Activity);
 
 /// <summary>Bell notice. `tone` is success, warning or danger; `when` is already formatted in Spanish (Bogotá time).</summary>
 public sealed record NavNotice(

@@ -104,53 +104,8 @@ internal static class RankingMapping
         string candidateName,
         string? professionalDataJson,
         IReadOnlyList<Requirement> requirements,
-        IReadOnlyList<RequirementResultResponse> results)
-    {
-        var sections = new List<ResumeSectionResponse>();
-        if (!string.IsNullOrWhiteSpace(professionalDataJson))
-        {
-            try
-            {
-                using var document = JsonDocument.Parse(professionalDataJson);
-                var root = document.RootElement;
-                var summary = root.TryGetProperty("summary", out var summaryNode) ? summaryNode.GetString() : null;
-                if (!string.IsNullOrWhiteSpace(summary))
-                {
-                    sections.Add(new ResumeSectionResponse("Resumen", [new ResumeLineResponse("text", summary, null, null)]));
-                }
-
-                if (root.TryGetProperty("skills", out var skills) && skills.ValueKind == JsonValueKind.Array)
-                {
-                    var lines = skills.EnumerateArray()
-                        .Select(skill => new ResumeLineResponse("bullet", skill.GetString() ?? string.Empty, null, null))
-                        .ToList();
-                    if (lines.Count > 0)
-                    {
-                        sections.Add(new ResumeSectionResponse("Habilidades", lines));
-                    }
-                }
-            }
-            catch (JsonException)
-            {
-                // Fall back to a minimal document below.
-            }
-        }
-
-        if (sections.Count == 0)
-        {
-            sections.Add(new ResumeSectionResponse(
-                "Experiencia",
-                [
-                    new ResumeLineResponse(
-                        "text",
-                        "La hoja de vida está disponible; Criba AI aún no generó una vista enriquecida.",
-                        null,
-                        null),
-                ]));
-        }
-
-        return new ResumeDocResponse(candidateName, candidateName, [], sections, 1);
-    }
+        IReadOnlyList<RequirementResultResponse> results) =>
+        Portal.ResumeDocBuilder.Build(candidateName, [], professionalDataJson);
 
     public static IReadOnlyList<RankRequirementResponse> MapRequirements(IReadOnlyList<Requirement> requirements) =>
         requirements

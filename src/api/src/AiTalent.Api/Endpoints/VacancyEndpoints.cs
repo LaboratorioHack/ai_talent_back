@@ -72,7 +72,8 @@ internal static class VacancyEndpoints
                     request.ClosingAt,
                     request.Positions,
                     profile,
-                    ct);
+                    ct,
+                    ToListing(request.Location, request.Modality, request.ContractType, request.Schedule, request.Salary));
 
                 return result.ToHttpResult(detail =>
                     Results.Created($"/api/vacancies/{detail.Vacancy.Id}", ToDetail(detail)));
@@ -114,7 +115,8 @@ internal static class VacancyEndpoints
                     request.Area,
                     request.ClosingAt,
                     request.Positions,
-                    ct);
+                    ct,
+                    ToListing(request.Location, request.Modality, request.ContractType, request.Schedule, request.Salary));
                 return result.ToHttpResult(detail => Results.Ok(ToDetail(detail)));
             })
             .WithName("UpdateVacancy")
@@ -210,7 +212,7 @@ internal static class VacancyEndpoints
             .RequireRateLimiting(RateLimitPolicies.PublicRead)
             .WithName("GetPublicVacancy")
             .WithSummary("Get an open vacancy (public)")
-            .WithDescription("Public page of a vacancy that is accepting applications (OPEN and before its closing date). Returns the title, area, closing date, company name, description and requirements (type, category, description, condition). Weights and equivalences are not exposed. Anything else returns 404.")
+            .WithDescription("Public page of a vacancy that is accepting applications (OPEN and before its closing date). Returns the title, area, closing date, company (name, sector, size), listing (location, modality, contract, schedule, salary), publish date, description and requirements (type, category, description, condition and the names of accepted equivalences). Weights and equivalence percentages are not exposed. Anything else returns 404.")
             .Produces<PublicVacancyResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status429TooManyRequests);
@@ -235,7 +237,16 @@ internal static class VacancyEndpoints
                     item.ResumeVersion,
                     item.ProcessingStatus,
                     item.ProcessingError,
-                    item.ResumeCreatedAt)).ToList()));
+                    item.ResumeCreatedAt,
+                    item.FileName,
+                    item.ContentType,
+                    item.SizeBytes,
+                    item.Pages,
+                    item.JobsRead,
+                    item.CertificationsRead,
+                    item.DuplicateOf,
+                    item.Fulfillment,
+                    item.Score)).ToList()));
             })
             .WithName("ListVacancyApplications")
             .WithSummary("List applications for a vacancy")
@@ -435,8 +446,19 @@ internal static class VacancyEndpoints
             requirements,
             ToResponse(detail.Counts),
             vacancy.CreatedAt,
-            vacancy.UpdatedAt);
+            vacancy.UpdatedAt,
+            ToListingResponse(vacancy),
+            vacancy.PublishedAt);
     }
+
+    /// <summary>The editor always sends the listing; old clients that send none leave it untouched.</summary>
+    private static VacancyListing? ToListing(string? location, string? modality, string? contractType, string? schedule, string? salary) =>
+        location is null && modality is null && contractType is null && schedule is null && salary is null
+            ? null
+            : new VacancyListing(location ?? string.Empty, modality ?? string.Empty, contractType ?? string.Empty, schedule ?? string.Empty, salary ?? string.Empty);
+
+    internal static VacancyListingResponse ToListingResponse(JobOpening vacancy) =>
+        new(vacancy.Location, vacancy.Modality, vacancy.ContractType, vacancy.Schedule, vacancy.Salary);
 
     private static PublicVacancyResponse ToPublic(PublicVacancy publicVacancy)
     {
@@ -448,7 +470,8 @@ internal static class VacancyEndpoints
                 requirement.Type.ToString().ToUpperInvariant(),
                 requirement.Category,
                 requirement.Description,
-                requirement.Condition)).ToList();
+                requirement.Condition,
+                requirement.Equivalences.Keys.ToList())).ToList();
 
         return new PublicVacancyResponse(
             vacancy.Id,
@@ -457,7 +480,11 @@ internal static class VacancyEndpoints
             vacancy.ClosingAt,
             vacancy.Positions,
             publicVacancy.CompanyName,
+            publicVacancy.CompanySector,
+            publicVacancy.CompanySize,
             profile?.Description,
+            ToListingResponse(vacancy),
+            vacancy.PublishedAt,
             requirements);
     }
 

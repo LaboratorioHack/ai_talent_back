@@ -235,6 +235,12 @@ internal sealed class FakeCvFileStorage : ICvFileStorage
         Uploads.Add((fileKey, contentType, ms.ToArray()));
         return fileKey;
     }
+
+    public Task<CvFile?> DownloadAsync(string fileKey, CancellationToken ct = default)
+    {
+        var upload = Uploads.LastOrDefault(item => item.Key == fileKey);
+        return Task.FromResult(upload.Bytes is null ? null : new CvFile(upload.Bytes, upload.ContentType));
+    }
 }
 
 internal sealed class FakeAiEngineClient : IAiEngineClient

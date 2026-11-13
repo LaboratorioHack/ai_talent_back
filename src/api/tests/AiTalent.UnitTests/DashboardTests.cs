@@ -150,7 +150,7 @@ public class DashboardServiceTests
     private readonly FakeVacancyInsights _insights = new();
 
     private DashboardService CreateService() =>
-        new(_vacancies, _companies, _insights, new StaffAccess(_staff), new FixedTimeProvider(DateTimeOffset.UtcNow));
+        new(_vacancies, _companies, _insights, new StaffAccess(_staff), new FakeCandidateSideStore(), new FixedTimeProvider(DateTimeOffset.UtcNow));
 
     [Fact]
     public async Task DashboardShowsOnlyOpenVacanciesOfTheCompany()
