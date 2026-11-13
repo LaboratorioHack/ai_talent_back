@@ -74,6 +74,12 @@ builder.Services.AddRateLimiter(options =>
         RateLimitPartition.GetFixedWindowLimiter(
             context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(15) }));
+
+    // Public vacancy pages are read-only but anonymous, so they get a per-IP read limit.
+    options.AddPolicy<string>(RateLimitPolicies.PublicRead, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = 60, Window = TimeSpan.FromMinutes(1) }));
 });
 
 // Behind Caddy: trust X-Forwarded-* so rate limiting sees the real client IP.
@@ -117,7 +123,11 @@ app.MapAuthEndpoints();
 app.MapCompanyEndpoints();
 app.MapStaffEndpoints();
 app.MapVacancyEndpoints();
+app.MapRankingEndpoints();
+app.MapInterviewEndpoints();
+app.MapGovernanceEndpoints();
 app.MapEvaluationEndpoints();
+app.MapRoleProfileEndpoints();
 app.MapDashboardEndpoints();
 
 await app.RunAsync();

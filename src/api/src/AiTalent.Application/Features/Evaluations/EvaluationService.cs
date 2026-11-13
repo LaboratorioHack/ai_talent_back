@@ -1,4 +1,3 @@
-using System.Net;
 using AiTalent.Application.Abstractions;
 using AiTalent.Application.Abstractions.AiEngine;
 using AiTalent.Application.Common;
@@ -385,23 +384,11 @@ public sealed class EvaluationService(
         return Result<EvaluationContext>.Success(new EvaluationContext(vacancy, profile, submissions));
     }
 
-    private static async Task<Result<T>> CallEngineAsync<T>(Func<Task<T>> call, CancellationToken ct)
-    {
-        try
-        {
-            return Result<T>.Success(await call());
-        }
-        catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.UnprocessableEntity)
-        {
-            return Result<T>.Failure(
-                ErrorKind.Invalid,
-                "The AI engine could not process this request with the current CV and role profile.");
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
-        {
-            return Result<T>.Failure(ErrorKind.Unavailable, "The AI engine is not available right now. Try again later.");
-        }
-    }
+    private static Task<Result<T>> CallEngineAsync<T>(Func<Task<T>> call, CancellationToken ct) =>
+        EngineCall.RunAsync(
+            call,
+            "The AI engine could not process this request with the current CV and role profile.",
+            ct);
 
     private sealed record EvaluationContext(
         JobOpening Vacancy,

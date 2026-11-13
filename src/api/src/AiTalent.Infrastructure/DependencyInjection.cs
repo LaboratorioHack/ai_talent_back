@@ -2,6 +2,7 @@ using System.Text;
 using AiTalent.Application.Abstractions;
 using AiTalent.Infrastructure.AiEngine;
 using AiTalent.Infrastructure.Auth;
+using AiTalent.Infrastructure.Email;
 using AiTalent.Infrastructure.Persistence;
 using AiTalent.Infrastructure.Persistence.Repositories;
 using AiTalent.Infrastructure.Storage;
@@ -26,6 +27,9 @@ public static class DependencyInjection
         services.AddScoped<ICandidateRepository, CandidateRepository>();
         services.AddScoped<IResumeRepository, ResumeRepository>();
         services.AddScoped<IApplicationRepository, ApplicationRepository>();
+        services.AddScoped<IEvaluationReadStore, EvaluationReadStore>();
+        services.AddScoped<IInterviewReadStore, InterviewReadStore>();
+        services.AddScoped<IGovernanceReadStore, GovernanceReadStore>();
         services.AddScoped<IVacancyInsights, VacancyInsights>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IAuditLog, AuditLog>();
@@ -41,6 +45,11 @@ public static class DependencyInjection
 
         services.Configure<AiEngineOptions>(configuration.GetSection(AiEngineOptions.SectionName));
         services.Configure<R2StorageOptions>(configuration.GetSection(R2StorageOptions.SectionName));
+
+        // Email: Gmail SMTP by default. Missing credentials do not block startup; SendAsync throws instead.
+        services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
+
         services.AddHttpClient();
         services.AddHttpClient<IAiEngineClient, AiEngineClient>((sp, client) =>
             {

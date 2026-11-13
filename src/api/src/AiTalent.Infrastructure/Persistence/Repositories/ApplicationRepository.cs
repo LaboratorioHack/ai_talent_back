@@ -11,6 +11,9 @@ internal sealed class ApplicationRepository(AppDbContext db) : IApplicationRepos
             application => application.JobOpeningId == jobOpeningId && application.CandidateId == candidateId,
             ct);
 
+    public Task<ApplicationEntity?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
+        db.Applications.FirstOrDefaultAsync(application => application.Id == id, ct);
+
     public async Task<IReadOnlyList<ApplicationSubmission>> ListByJobOpeningAsync(Guid jobOpeningId, CancellationToken ct = default)
     {
         var rows = await (

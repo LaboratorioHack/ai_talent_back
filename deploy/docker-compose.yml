@@ -53,6 +53,12 @@ services:
       R2__AccessKeyId: ${R2_ACCESS_KEY_ID}
       R2__SecretAccessKey: ${R2_SECRET_ACCESS_KEY}
       R2__BucketName: ${R2_BUCKET_NAME}
+      Smtp__Host: ${Smtp__Host:-smtp.gmail.com}
+      Smtp__Port: ${Smtp__Port:-587}
+      Smtp__Username: ${Smtp__Username}
+      Smtp__Password: ${Smtp__Password}
+      Smtp__FromAddress: ${Smtp__FromAddress}
+      Smtp__FromName: ${Smtp__FromName:-Criba AI}
       R2__EndpointUrl: ${R2_ENDPOINT_URL}
     expose: ["8080"]
     depends_on: [engine]

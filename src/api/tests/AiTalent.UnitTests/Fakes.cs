@@ -64,6 +64,9 @@ internal sealed class FakeJobOpeningRepository : IJobOpeningRepository
     public Task<JobOpening?> FindForApplicationAsync(Guid id, CancellationToken ct = default) =>
         Task.FromResult(Vacancies.FirstOrDefault(vacancy => vacancy.Id == id && vacancy.DeletedAt is null));
 
+    public Task<JobOpening?> FindPublicAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult(Vacancies.FirstOrDefault(vacancy => vacancy.Id == id && vacancy.DeletedAt is null));
+
     public Task<bool> IsProfileInUseAsync(Guid roleProfileId, CancellationToken ct = default) =>
         Task.FromResult(UsedProfiles.Contains(roleProfileId));
 
@@ -174,6 +177,9 @@ internal sealed class FakeApplicationRepository : IApplicationRepository
     public Task<ApplicationEntity?> FindByJobAndCandidateAsync(Guid jobOpeningId, Guid candidateId, CancellationToken ct = default) =>
         Task.FromResult(Applications.FirstOrDefault(a =>
             a.JobOpeningId == jobOpeningId && a.CandidateId == candidateId));
+
+    public Task<ApplicationEntity?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
+        Task.FromResult(Applications.FirstOrDefault(a => a.Id == id));
 
     public Task<IReadOnlyList<ApplicationSubmission>> ListByJobOpeningAsync(Guid jobOpeningId, CancellationToken ct = default)
     {
@@ -325,6 +331,36 @@ internal sealed class FakeAiEngineClient : IAiEngineClient
             request.ResumeIds.Select(id => new SideBySideCandidateDto(id.ToString(), "Cloud", "English", "Platform")).ToList(),
             "Depth versus breadth.",
             []));
+    }
+
+    public List<ProposeRequirementsRequest> ProposeRequests { get; } = [];
+    public List<SuggestEquivalencesRequest> EquivalenceRequests { get; } = [];
+    public Exception? ThrowOnAssist { get; set; }
+
+    public Task<ProposeRequirementsResponse> ProposeRequirementsAsync(ProposeRequirementsRequest request, CancellationToken cancellationToken = default)
+    {
+        ProposeRequests.Add(request);
+        if (ThrowOnAssist is not null)
+        {
+            throw ThrowOnAssist;
+        }
+
+        return Task.FromResult(new ProposeRequirementsResponse(
+        [
+            new ProposedRequirementDto("Unity", "MANDATORY", 60, [new EquivalenceDto("Unreal Engine", 70)]),
+            new ProposedRequirementDto("Shaders", "DESIRABLE", 40, []),
+        ]));
+    }
+
+    public Task<SuggestEquivalencesResponse> SuggestEquivalencesAsync(SuggestEquivalencesRequest request, CancellationToken cancellationToken = default)
+    {
+        EquivalenceRequests.Add(request);
+        if (ThrowOnAssist is not null)
+        {
+            throw ThrowOnAssist;
+        }
+
+        return Task.FromResult(new SuggestEquivalencesResponse([new EquivalenceDto("C++", 70)]));
     }
 }
 

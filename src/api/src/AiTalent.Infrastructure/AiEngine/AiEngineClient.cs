@@ -78,6 +78,22 @@ internal sealed class AiEngineClient(HttpClient httpClient) : IAiEngineClient
             request,
             cancellationToken);
 
+    public Task<ProposeRequirementsResponse> ProposeRequirementsAsync(
+        ProposeRequirementsRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostJsonAsync<ProposeRequirementsRequest, ProposeRequirementsResponse>(
+            "v1/role-profiles/propose",
+            request,
+            cancellationToken);
+
+    public Task<SuggestEquivalencesResponse> SuggestEquivalencesAsync(
+        SuggestEquivalencesRequest request,
+        CancellationToken cancellationToken = default) =>
+        PostJsonAsync<SuggestEquivalencesRequest, SuggestEquivalencesResponse>(
+            "v1/role-profiles/equivalences",
+            request,
+            cancellationToken);
+
     private async Task<TResponse> PostJsonAsync<TRequest, TResponse>(
         string relativeUrl,
         TRequest body,

@@ -6,6 +6,8 @@ public interface IApplicationRepository
 {
     Task<ApplicationEntity?> FindByJobAndCandidateAsync(Guid jobOpeningId, Guid candidateId, CancellationToken ct = default);
 
+    Task<ApplicationEntity?> FindByIdAsync(Guid id, CancellationToken ct = default);
+
     Task<IReadOnlyList<ApplicationSubmission>> ListByJobOpeningAsync(Guid jobOpeningId, CancellationToken ct = default);
 
     void Add(ApplicationEntity application);

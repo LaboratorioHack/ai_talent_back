@@ -100,6 +100,31 @@ internal sealed record CandidateApplicationResponse(
     bool DuplicateContent,
     string Message);
 
+internal sealed record PublicVacancyResponse(
+    Guid Id,
+    string Title,
+    string? Area,
+    DateTimeOffset? ClosingAt,
+    int Positions,
+    string CompanyName,
+    string? Description,
+    IReadOnlyList<PublicRequirementResponse> Requirements);
+
+internal sealed record PublicRequirementResponse(
+    string Type,
+    string? Category,
+    string Description,
+    string? Condition);
+
+internal sealed record ChangeApplicationStatusRequest(string? Status, string? Reason);
+
+internal sealed record ApplicationStageResponse(
+    Guid ApplicationId,
+    Guid VacancyId,
+    Guid CandidateId,
+    string SelectionStatus,
+    DateTimeOffset UpdatedAt);
+
 internal sealed record VacancyApplicationResponse(
     Guid ApplicationId,
     Guid CandidateId,
@@ -120,3 +145,17 @@ internal sealed record RankApplicationsRequest(IReadOnlyList<Guid>? ApplicationI
 internal sealed record CompareApplicationsRequest(IReadOnlyList<Guid>? ApplicationIds);
 
 internal sealed record EvidenceSearchApiRequest(string? Query, int? Limit);
+
+internal sealed record ExistingRequirementApiRequest(string? Description, string? Type, decimal? Weight);
+
+internal sealed record ProposeRequirementsApiRequest(
+    string? Description,
+    string? Title,
+    string? Area,
+    IReadOnlyList<ExistingRequirementApiRequest>? Existing);
+
+internal sealed record SuggestEquivalencesApiRequest(
+    string? Requirement,
+    string? Title,
+    string? Description,
+    IReadOnlyList<string>? Existing);
