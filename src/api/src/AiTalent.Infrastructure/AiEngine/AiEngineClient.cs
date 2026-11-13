@@ -2,10 +2,11 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using AiTalent.Application.Abstractions;
 using AiTalent.Application.Abstractions.AiEngine;
+using Microsoft.Extensions.Logging;
 
 namespace AiTalent.Infrastructure.AiEngine;
 
-internal sealed class AiEngineClient(HttpClient httpClient) : IAiEngineClient
+internal sealed class AiEngineClient(HttpClient httpClient, ILogger<AiEngineClient> logger) : IAiEngineClient
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -26,6 +27,23 @@ internal sealed class AiEngineClient(HttpClient httpClient) : IAiEngineClient
         }
     }
 
+    public async Task<EngineReadiness> GetReadinessAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using var response = await httpClient.GetAsync(new Uri("health/ready", UriKind.Relative), cancellationToken);
+            var checks = response.IsSuccessStatusCode
+                ? await response.Content.ReadFromJsonAsync<JsonElement>(JsonOptions, cancellationToken)
+                : (JsonElement?)null;
+            return new EngineReadiness((int)response.StatusCode, checks);
+        }
+        catch (HttpRequestException ex)
+        {
+            logger.LogWarning(ex, "AI Engine readiness call failed");
+            return new EngineReadiness(0, null);
+        }
+    }
+
     public async Task<CvIngestionResponse> IngestCvAsync(
         IngestCvRequest request,
         CancellationToken cancellationToken = default)
@@ -41,7 +59,7 @@ internal sealed class AiEngineClient(HttpClient httpClient) : IAiEngineClient
         using var form = new MultipartFormDataContent();
         form.Add(new StringContent(request.ResumeId.ToString()), "resume_id");
         using var response = await httpClient.PostAsync(new Uri("v1/cvs/ingest", UriKind.Relative), form, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        await EnsureSuccessAsync(response, "v1/cvs/ingest", cancellationToken);
         var payload = await response.Content.ReadFromJsonAsync<CvIngestionResponse>(JsonOptions, cancellationToken);
         return payload ?? throw new InvalidOperationException("Empty response from AI Engine.");
     }
@@ -100,8 +118,25 @@ internal sealed class AiEngineClient(HttpClient httpClient) : IAiEngineClient
         CancellationToken cancellationToken)
     {
         using var response = await httpClient.PostAsJsonAsync(relativeUrl, body, JsonOptions, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        await EnsureSuccessAsync(response, relativeUrl, cancellationToken);
         var payload = await response.Content.ReadFromJsonAsync<TResponse>(JsonOptions, cancellationToken);
         return payload ?? throw new InvalidOperationException("Empty response from AI Engine.");
+    }
+
+    /// <summary>Callers map any failure to "engine unavailable"; the real status and reason stay in the log.</summary>
+    private async Task EnsureSuccessAsync(HttpResponseMessage response, string route, CancellationToken cancellationToken)
+    {
+        if (response.IsSuccessStatusCode)
+        {
+            return;
+        }
+
+        var detail = await response.Content.ReadAsStringAsync(cancellationToken);
+        logger.LogWarning(
+            "AI Engine {Route} answered {Status}: {Detail}",
+            route,
+            (int)response.StatusCode,
+            detail.Length > 500 ? detail[..500] : detail);
+        response.EnsureSuccessStatusCode();
     }
 }

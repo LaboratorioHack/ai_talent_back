@@ -248,6 +248,9 @@ internal sealed class FakeCvFileStorage : ICvFileStorage
 
 internal sealed class FakeAiEngineClient : IAiEngineClient
 {
+    public Task<EngineReadiness> GetReadinessAsync(CancellationToken cancellationToken = default) =>
+        Task.FromResult(new EngineReadiness(200, null));
+
     public bool Healthy { get; set; } = true;
     public Exception? ThrowOnIngest { get; set; }
     public List<Guid> IngestedResumeIds { get; } = [];

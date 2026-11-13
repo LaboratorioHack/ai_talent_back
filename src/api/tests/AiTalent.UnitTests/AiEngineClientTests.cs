@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using AiTalent.Application.Abstractions.AiEngine;
 using AiTalent.Infrastructure.AiEngine;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AiTalent.UnitTests;
 
@@ -225,7 +226,7 @@ public class AiEngineClientTests
     private static AiEngineClient CreateClient(HttpMessageHandler handler)
     {
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("http://localhost:8000/") };
-        return new AiEngineClient(httpClient);
+        return new AiEngineClient(httpClient, NullLogger<AiEngineClient>.Instance);
     }
 
     private sealed class StubHandler(string json) : HttpMessageHandler
