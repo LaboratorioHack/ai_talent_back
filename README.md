@@ -39,7 +39,7 @@ src/api/tests/              Unit, Integration, Architecture (reglas de dependenc
 ### Base de datos
 `supabase/migrations` (Supabase CLI) es la **única fuente de verdad** del esquema (lo usan .NET y Python). EF Core se usa sin migraciones.
 Los datos viven en el esquema privado `app` (no expuesto por la Data API); el front solo usa Supabase Auth.
-`supabase/config.toml` define Auth (MFA, sin registro público), Storage (bucket `cvs` privado) y la exposición de la API.
+`supabase/config.toml` define Auth (MFA, entrada y registro con enlace mágico de Supabase), Storage (bucket `cvs` privado) y la exposición de la API.
 
 ## Seguridad
 Ver [SECURITY.md](SECURITY.md): mapeo OWASP Top 10:2025 + OWASP LLM Top 10 y checklist de despliegue.
@@ -63,8 +63,8 @@ Documentación interactiva: `http://localhost:5022/scalar/v1` (solo en Developme
 
 ### Flujo: alta de una empresa nueva
 
-1. Ops crea la cuenta con `scripts/provision-user.sh` (el registro público está cerrado).
-2. La persona inicia sesión en Supabase y obtiene un token.
+1. La persona escribe su correo en `/login`; Supabase Auth (`signInWithOtp`) crea la cuenta si es nueva y le manda el enlace.
+2. Abre el enlace: `/auth/callback` canjea el código y deja la sesión.
 3. `GET /api/auth/me` devuelve `company: null`, así que la app pide crear o unirse a una empresa.
 4. `POST /api/companies` con `{ companyName, sector, size, yourName }` la crea y la persona queda como **admin**.
 5. Para usar acciones de admin, debe activar MFA (TOTP) en Supabase. Sin MFA, la API responde 403.
@@ -73,7 +73,7 @@ Documentación interactiva: `http://localhost:5022/scalar/v1` (solo en Developme
 
 1. El admin, con MFA, pide un código: `POST /api/companies/current/invite-codes`.
 2. Comparte el código con la persona (la app no lo envía).
-3. La persona hace login (su cuenta ya fue creada por ops) y llama a `POST /api/companies/join` con `{ code, yourName }`; queda como **recruiter**.
+3. La persona entra con el enlace de Supabase y llama a `POST /api/companies/join` con `{ code, yourName }`; queda como **recruiter**.
 4. Si hace falta un admin nuevo, otro admin lo promueve con `PATCH /api/staff/{userId}`.
 
 ### Reglas del código de invitación
@@ -109,23 +109,27 @@ Cada vacante tiene un perfil de cargo versionado con sus requisitos. El perfil s
 Cada requisito lleva `type` (`MANDATORY`, `DESIRABLE`, `DISQUALIFYING`), `weight` (0–100) y `equivalences` como porcentajes, por ejemplo `{ "AWS": 80 }` para "AWS cuenta 80% de Azure".
 Los conteos de la lista (`resumes`, `meets`, `partiallyMeets`, `doesNotMeet`, `disqualified`, `interviews`) se devuelven en cero hasta que existan la carga de CVs y las evaluaciones.
 
-### Alta de usuarios (registro cerrado)
+### Entrada y registro (Supabase Auth, sin contraseña)
 
-No hay registro público: `supabase/config.toml` define `enable_signup = false` y la API no expone `/api/auth/signup`. El login, el refresh de token y la recuperación de contraseña siguen funcionando en Supabase Auth.
+Todo lo hace Supabase Auth: el front llama a `signInWithOtp` con el correo, Supabase crea la cuenta la primera vez y **manda el correo con el enlace**. El enlace vuelve a `/auth/callback` de la web, que canjea el código y deja la sesión. La API no participa: solo valida el JWT.
 
-Las cuentas se crean desde ops, nunca desde el navegador:
+El endpoint `POST /api/public/portal-link` (enlace enviado por el SMTP de Criba) está comentado. El SMTP de Criba (`Smtp__*`) se sigue usando para las invitaciones a entrevista y demás avisos, no para entrar.
 
-```bash
-export SUPABASE_URL="https://<project-ref>.supabase.co"
-export SUPABASE_SERVICE_ROLE_KEY="<service-role-key>"   # nunca en el front ni en la API
-./scripts/provision-user.sh persona@empresa.com "Nombre Persona"
-```
+Configuración del proyecto hospedado (Dashboard de Supabase; `supabase db push` no la aplica):
 
-El script usa `POST /auth/v1/admin/users` con `email_confirm: true`, así que la persona puede iniciar sesión de inmediato. Solo crea el usuario de Auth: la empresa y el rol se crean después con `POST /api/companies` (o `POST /api/companies/join`).
+1. **Authentication → Sign In / Providers → Email**: activado, y **Allow new users to sign up** encendido.
+2. **Authentication → URL Configuration**: Site URL `https://app.criba.isroot.in`; Redirect URLs `https://app.criba.isroot.in/auth/callback` y `http://localhost:3000/auth/callback`.
+3. **Authentication → Emails → SMTP Settings**: configurar un SMTP propio. El de Supabase por defecto solo envía a los miembros del equipo del proyecto y unos pocos correos por hora.
+4. **Authentication → Rate Limits**: subir *emails sent per hour* tras configurar el SMTP.
 
-También se puede hacer a mano en Supabase Studio → Authentication → Users → Add user (marcando *Auto Confirm User*).
+#### Google y Microsoft
 
-En el proyecto hospedado hay que desactivar también **Authentication → Sign In / Providers → Allow new users to sign up**. `supabase db push` no aplica esta configuración; si solo se cambia `config.toml`, el proyecto remoto sigue permitiendo registros.
+Los botones del login y del portal usan `signInWithOAuth` (`google` y `azure`). La primera vez crean la cuenta, igual que el enlace. En ambos proveedores la URL de redirección autorizada es `https://<project-ref>.supabase.co/auth/v1/callback`.
+
+- **Google**: Google Cloud Console → APIs & Services → Credentials → *OAuth client ID* (Web application). Agregar esa URL en *Authorized redirect URIs*. Copiar Client ID y Secret en Supabase → Authentication → Sign In / Providers → **Google**.
+- **Microsoft**: Microsoft Entra ID → App registrations → New registration, con *Accounts in any organizational directory and personal Microsoft accounts*. Agregar esa URL como Redirect URI (Web), crear un *client secret* y copiar Application (client) ID y el valor del secret en Supabase → **Azure**, con Azure Tenant URL `https://login.microsoftonline.com/common`. En *Token configuration* agregar el claim opcional `email`.
+
+En el portal, el postulante debe entrar con la misma cuenta de correo con la que se postuló: el portal busca sus postulaciones por correo.
 
 ### Configuración necesaria
 
@@ -133,7 +137,7 @@ En el proyecto hospedado hay que desactivar también **Authentication → Sign I
 |---|---|---|
 | `SUPABASE_URL` | API | URL del proyecto Supabase |
 | `INVITES__SIGNINGKEY` | API | Mínimo 32 caracteres. Generar con `openssl rand -base64 48`. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Ops / AI Engine | Solo para `scripts/provision-user.sh` y Storage. Nunca en la API ni en el navegador. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Ops / AI Engine | Storage y `scripts/provision-user.sh` (opcional). Nunca en el navegador. |
 
 La API no arranca si falta `SUPABASE_URL` (fuera de Development) o `INVITES__SIGNINGKEY`.
 

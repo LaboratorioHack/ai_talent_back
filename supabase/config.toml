@@ -170,7 +170,7 @@ site_url = "http://127.0.0.1:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+additional_redirect_urls = ["https://127.0.0.1:3000", "http://localhost:3000/auth/callback", "https://app.criba.isroot.in/auth/callback"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -185,7 +185,8 @@ refresh_token_reuse_interval = 10
 # Allow/disallow new user signups to your project. Existing users can still sign in.
 # Closed registration: accounts are provisioned server-side (Supabase Admin API / Studio),
 # never through the public API or the web app.
-enable_signup = false
+# Registro sin contraseña: el enlace mágico de Supabase (signInWithOtp) crea la cuenta la primera vez.
+enable_signup = true
 # Allow/disallow anonymous sign-ins to your project.
 enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
@@ -338,6 +339,29 @@ max_frequency = "5s"
 # Use an external OAuth provider. The full list of providers are: `apple`, `azure`, `bitbucket`,
 # `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
 # `twitter`, `x`, `slack_oidc`, `spotify`, `workos`, `zoom`.
+# Entrar con Google y Microsoft (botones del login y del portal). Para el stack local: poner
+# enabled = true y exportar las variables; en el proyecto hospedado se configuran en el Dashboard.
+# Callback que se registra en Google Cloud / Microsoft Entra: https://<project-ref>.supabase.co/auth/v1/callback
+[auth.external.google]
+enabled = false
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)"
+redirect_uri = ""
+url = ""
+# Necesario para entrar con Google en el stack local.
+skip_nonce_check = true
+email_optional = false
+
+[auth.external.azure]
+enabled = false
+client_id = "env(SUPABASE_AUTH_EXTERNAL_AZURE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_EXTERNAL_AZURE_SECRET)"
+redirect_uri = ""
+# "common" acepta cuentas de cualquier organización y cuentas personales de Microsoft.
+url = "https://login.microsoftonline.com/common"
+skip_nonce_check = false
+email_optional = false
+
 [auth.external.apple]
 enabled = false
 client_id = ""
