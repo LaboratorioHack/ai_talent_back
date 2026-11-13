@@ -63,14 +63,17 @@ public sealed class Application
             ApplicationSelectionStatus.Rejected,
             ApplicationSelectionStatus.Withdrawn,
         ],
+        // One step back is allowed between open stages, so a recruiter can undo a move.
         [ApplicationSelectionStatus.Shortlisted] =
         [
+            ApplicationSelectionStatus.Applied,
             ApplicationSelectionStatus.Interview,
             ApplicationSelectionStatus.Rejected,
             ApplicationSelectionStatus.Withdrawn,
         ],
         [ApplicationSelectionStatus.Interview] =
         [
+            ApplicationSelectionStatus.Shortlisted,
             ApplicationSelectionStatus.Hired,
             ApplicationSelectionStatus.Rejected,
             ApplicationSelectionStatus.Withdrawn,

@@ -12,7 +12,7 @@ public class GovernanceServiceTests
     private readonly FakeEvaluationReadStore _evaluations = new();
     private readonly FakeGovernanceReadStore _audit = new();
     private GovernanceService CreateService() =>
-        new(_companies, _evaluations, _audit, new StaffAccess(_staff));
+        new(_companies, _evaluations, _audit, new StaffAccess(_staff), TimeProvider.System);
 
     [Fact]
     public async Task GetAudit_returns_company_name_and_entries()
@@ -35,7 +35,7 @@ public class GovernanceServiceTests
             "{}",
             "Ana Martínez"));
 
-        var result = await CreateService().GetAuditAsync(userId, default);
+        var result = await CreateService().GetAuditAsync(userId, 30, default);
         Assert.True(result.IsSuccess);
         Assert.Equal("Cordillera Financiera", result.Value!.Organization);
         Assert.Equal(12, result.Value.Stats.ResumesEvaluated);

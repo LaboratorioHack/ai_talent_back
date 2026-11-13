@@ -64,7 +64,10 @@ public sealed class InterviewService(IInterviewReadStore interviews, StaffAccess
             turnsWithQuestions.Count > 0 ? turnsWithQuestions.Count : turns.Count,
             turns,
             ParseContrasts(snapshot.InconsistenciesJson),
-            snapshot.Recommendation);
+            snapshot.Recommendation,
+            snapshot.ApplicationId,
+            snapshot.VacancyId,
+            snapshot.ExpiresAt?.ToString("o"));
     }
 
     private static string MapStatus(string status) =>

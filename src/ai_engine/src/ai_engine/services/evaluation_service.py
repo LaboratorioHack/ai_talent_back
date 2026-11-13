@@ -32,6 +32,7 @@ from ai_engine.schemas.evaluation import (
     RequirementAssessment,
 )
 from ai_engine.scoring.calculator import RequirementScoreInput, compute_scores
+from ai_engine.services.assessment_parsing import as_points, parse_assessments
 
 logger = logging.getLogger(__name__)
 
@@ -109,16 +110,14 @@ class EvaluationService:
 
         eval_id: uuid.UUID | None = None
 
-        for item in assessments_raw:
-            req_id = uuid.UUID(str(item.get("requirement_id")))
-            req_row = req_map.get(req_id)
-            if not req_row:
-                continue
-            result = str(item.get("result", "NO_EVIDENCE")).upper()
-            score = float(item.get("score", 0))
-            confidence = float(item.get("confidence", 0.5))
-            justification = str(item.get("justification", ""))
-            frag_ids = [uuid.UUID(str(x)) for x in item.get("fragment_ids") or []]
+        for parsed in parse_assessments(assessments_raw, list(req_map)):
+            req_id = parsed.requirement_id
+            req_row = req_map[req_id]
+            result = parsed.result
+            score = parsed.score
+            confidence = parsed.confidence
+            justification = parsed.justification
+            frag_ids = parsed.fragment_ids
 
             evidences: list[EvidenceChunk] = []
             for chunk in evidence_by_req.get(req_id, []):
@@ -170,8 +169,8 @@ class EvaluationService:
             fulfillment=scored.fulfillment,
             disqualified=scored.disqualified,
             confidence=confidence,
-            strengths=llm_result.get("strengths") or [],
-            gaps=llm_result.get("gaps") or [],
+            strengths=as_points(llm_result.get("strengths")),
+            gaps=as_points(llm_result.get("gaps")),
             recommend_interview=scored.recommend_interview,
             ai_model=self._evaluator.ai_model,
             prompt_version=self._evaluator.prompt_version,
@@ -208,8 +207,8 @@ class EvaluationService:
             confidence=confidence,
             recommend_interview=scored.recommend_interview,
             disqualified=scored.disqualified,
-            strengths=llm_result.get("strengths") or [],
-            gaps=llm_result.get("gaps") or [],
+            strengths=as_points(llm_result.get("strengths")),
+            gaps=as_points(llm_result.get("gaps")),
             requirement_assessments=response_assessments,
             ai_model=self._evaluator.ai_model,
             prompt_version=settings.prompt_version,

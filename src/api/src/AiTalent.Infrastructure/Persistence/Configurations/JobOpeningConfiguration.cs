@@ -26,6 +26,12 @@ internal sealed class JobOpeningConfiguration : IEntityTypeConfiguration<JobOpen
         builder.Property(o => o.CreatedAt).HasColumnName("created_at");
         builder.Property(o => o.UpdatedAt).HasColumnName("updated_at");
         builder.Property(o => o.DeletedAt).HasColumnName("deleted_at");
+        builder.Property(o => o.Location).HasColumnName("location");
+        builder.Property(o => o.Modality).HasColumnName("modality");
+        builder.Property(o => o.ContractType).HasColumnName("contract_type");
+        builder.Property(o => o.Schedule).HasColumnName("schedule");
+        builder.Property(o => o.Salary).HasColumnName("salary");
+        builder.Property(o => o.PublishedAt).HasColumnName("published_at");
 
         builder.HasMany(o => o.Profiles)
             .WithOne()

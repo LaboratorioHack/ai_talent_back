@@ -41,7 +41,10 @@ internal sealed class InterviewReadStore(AppDbContext db) : IInterviewReadStore
               i.created_at,
               i.completed_at,
               i.recommendation,
-              i.inconsistencies::text
+              i.inconsistencies::text,
+              a.id,
+              jo.id,
+              i.expires_at
             from app.interviews i
             join app.evaluations e on e.id = i.evaluation_id
             join app.applications a on a.id = e.application_id
@@ -49,7 +52,8 @@ internal sealed class InterviewReadStore(AppDbContext db) : IInterviewReadStore
             join app.job_openings jo on jo.id = a.job_opening_id
             where jo.company_id = @company_id
               and jo.deleted_at is null
-              and (@interview_id is null or i.id = @interview_id)
+              and i.status <> 'CANCELLED'
+              and (cast(@interview_id as uuid) is null or i.id = cast(@interview_id as uuid))
             order by coalesce(i.started_at, i.created_at) desc
             """;
 
@@ -84,7 +88,10 @@ internal sealed class InterviewReadStore(AppDbContext db) : IInterviewReadStore
                     await reader.IsDBNullAsync(9, ct) ? null : reader.GetFieldValue<DateTimeOffset>(9),
                     await reader.IsDBNullAsync(10, ct) ? null : reader.GetString(10),
                     await reader.IsDBNullAsync(11, ct) ? null : reader.GetString(11),
-                    []));
+                    [],
+                    reader.GetGuid(12),
+                    reader.GetGuid(13),
+                    await reader.IsDBNullAsync(14, ct) ? null : reader.GetFieldValue<DateTimeOffset>(14)));
             }
 
             return rows;

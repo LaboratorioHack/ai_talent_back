@@ -37,8 +37,17 @@ internal static class RankingMapping
             ? "Se postuló con el enlace"
             : "Subida por tu equipo";
 
-    public static string? ToIsoDate(DateTimeOffset? value) =>
-        value?.ToString("yyyy-MM-dd");
+    /// <summary>Calendar day in Bogotá, like the rest of the API (a vacancy closing at 23:59 local is that day, not the next).</summary>
+    public static string? ToIsoDate(DateTimeOffset? value) => Portal.Dates.Day(value);
+
+    /// <summary>
+    /// Points a requirement adds to the 0–100 total: its weight times how well it is met. The engine stores
+    /// the per-requirement score (0–100); the web app shows what each one contributes.
+    /// </summary>
+    public static double Contribution(decimal requirementScore, Requirement? requirement) =>
+        requirement is null || requirement.Type == RequirementType.Disqualifying
+            ? 0
+            : Math.Round((double)(requirement.Weight * requirementScore / 100m), 1);
 
     public static RankedCandidateResponse MapCandidate(
         VacancyEvaluationSnapshot snapshot,
@@ -65,7 +74,7 @@ internal static class RankingMapping
                     result.RequirementResultId,
                     result.RequirementId,
                     ToFrontendResult(result.Result),
-                    (double)result.Score,
+                    Contribution(result.Score, requirement),
                     (double)result.Confidence,
                     result.Justification ?? string.Empty,
                     result.Evidence.Select(evidence => new EvidenceResponse(
@@ -104,53 +113,8 @@ internal static class RankingMapping
         string candidateName,
         string? professionalDataJson,
         IReadOnlyList<Requirement> requirements,
-        IReadOnlyList<RequirementResultResponse> results)
-    {
-        var sections = new List<ResumeSectionResponse>();
-        if (!string.IsNullOrWhiteSpace(professionalDataJson))
-        {
-            try
-            {
-                using var document = JsonDocument.Parse(professionalDataJson);
-                var root = document.RootElement;
-                var summary = root.TryGetProperty("summary", out var summaryNode) ? summaryNode.GetString() : null;
-                if (!string.IsNullOrWhiteSpace(summary))
-                {
-                    sections.Add(new ResumeSectionResponse("Resumen", [new ResumeLineResponse("text", summary, null, null)]));
-                }
-
-                if (root.TryGetProperty("skills", out var skills) && skills.ValueKind == JsonValueKind.Array)
-                {
-                    var lines = skills.EnumerateArray()
-                        .Select(skill => new ResumeLineResponse("bullet", skill.GetString() ?? string.Empty, null, null))
-                        .ToList();
-                    if (lines.Count > 0)
-                    {
-                        sections.Add(new ResumeSectionResponse("Habilidades", lines));
-                    }
-                }
-            }
-            catch (JsonException)
-            {
-                // Fall back to a minimal document below.
-            }
-        }
-
-        if (sections.Count == 0)
-        {
-            sections.Add(new ResumeSectionResponse(
-                "Experiencia",
-                [
-                    new ResumeLineResponse(
-                        "text",
-                        "La hoja de vida está disponible; Criba AI aún no generó una vista enriquecida.",
-                        null,
-                        null),
-                ]));
-        }
-
-        return new ResumeDocResponse(candidateName, candidateName, [], sections, 1);
-    }
+        IReadOnlyList<RequirementResultResponse> results) =>
+        Portal.ResumeDocBuilder.Build(candidateName, [], professionalDataJson);
 
     public static IReadOnlyList<RankRequirementResponse> MapRequirements(IReadOnlyList<Requirement> requirements) =>
         requirements

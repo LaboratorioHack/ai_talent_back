@@ -53,6 +53,22 @@ public sealed class JobOpening
     /// <summary>Borrado lógico: conserva postulaciones, evaluaciones y auditoría.</summary>
     public DateTimeOffset? DeletedAt { get; private set; }
 
+    /// <summary>City or "Remoto" as the company wrote it.</summary>
+    public string? Location { get; private set; }
+
+    /// <summary>ONSITE, HYBRID or REMOTE.</summary>
+    public string? Modality { get; private set; }
+
+    public string? ContractType { get; private set; }
+
+    public string? Schedule { get; private set; }
+
+    /// <summary>Free text ("$8 a $10 millones"); null shows "A convenir".</summary>
+    public string? Salary { get; private set; }
+
+    /// <summary>First time the vacancy was published.</summary>
+    public DateTimeOffset? PublishedAt { get; private set; }
+
     public List<RoleProfile> Profiles { get; private set; } = [];
 
     public bool IsDeleted => DeletedAt is not null;
@@ -74,9 +90,20 @@ public sealed class JobOpening
         Touch();
     }
 
+    public void SetListing(VacancyListing listing)
+    {
+        Location = listing.Location;
+        Modality = listing.Modality;
+        ContractType = listing.ContractType;
+        Schedule = listing.Schedule;
+        Salary = listing.Salary;
+        Touch();
+    }
+
     public void Publish()
     {
         Status = JobOpeningStatus.Open;
+        PublishedAt ??= DateTimeOffset.UtcNow;
         Touch();
     }
 
@@ -93,4 +120,15 @@ public sealed class JobOpening
     }
 
     private void Touch() => UpdatedAt = DateTimeOffset.UtcNow;
+}
+
+/// <summary>What a candidate sees about the job besides the profile. Every field is optional.</summary>
+public sealed record VacancyListing(
+    string? Location,
+    string? Modality,
+    string? ContractType,
+    string? Schedule,
+    string? Salary)
+{
+    public static readonly string[] Modalities = ["ONSITE", "HYBRID", "REMOTE"];
 }

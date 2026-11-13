@@ -4,7 +4,7 @@ using AiTalent.Domain.Entities;
 
 namespace AiTalent.Application.Features.Vacancies;
 
-public sealed record PublicVacancy(JobOpening Vacancy, string CompanyName);
+public sealed record PublicVacancy(JobOpening Vacancy, string CompanyName, string? CompanySector = null, string? CompanySize = null);
 
 /// <summary>Read-only view of an open vacancy for candidates. Never exposes scoring internals.</summary>
 public sealed class PublicVacancyService(
@@ -25,6 +25,6 @@ public sealed class PublicVacancyService(
             return Result<PublicVacancy>.Failure(ErrorKind.NotFound, "Vacancy not found.");
         }
 
-        return Result<PublicVacancy>.Success(new PublicVacancy(vacancy, company.Name));
+        return Result<PublicVacancy>.Success(new PublicVacancy(vacancy, company.Name, company.Sector, company.Size));
     }
 }

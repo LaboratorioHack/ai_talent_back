@@ -47,7 +47,16 @@ internal sealed record VacancyDetailResponse(
     IReadOnlyList<RequirementResponse> Requirements,
     VacancyCountsResponse Counts,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    VacancyListingResponse Listing,
+    DateTimeOffset? PublishedAt);
+
+internal sealed record VacancyListingResponse(
+    string? Location,
+    string? Modality,
+    string? ContractType,
+    string? Schedule,
+    string? Salary);
 
 internal sealed record VacancyCountsResponse(
     int Resumes,
@@ -72,13 +81,23 @@ internal sealed record CreateVacancyRequest(
     DateTimeOffset? ClosingAt,
     int? Positions,
     string? Description,
-    IReadOnlyList<RequirementRequest>? Requirements);
+    IReadOnlyList<RequirementRequest>? Requirements,
+    string? Location = null,
+    string? Modality = null,
+    string? ContractType = null,
+    string? Schedule = null,
+    string? Salary = null);
 
 internal sealed record UpdateVacancyRequest(
     string? Title,
     string? Area,
     DateTimeOffset? ClosingAt,
-    int? Positions);
+    int? Positions,
+    string? Location = null,
+    string? Modality = null,
+    string? ContractType = null,
+    string? Schedule = null,
+    string? Salary = null);
 
 internal sealed record UpdateVacancyProfileRequest(
     string? Description,
@@ -107,14 +126,20 @@ internal sealed record PublicVacancyResponse(
     DateTimeOffset? ClosingAt,
     int Positions,
     string CompanyName,
+    string? CompanySector,
+    string? CompanySize,
     string? Description,
+    VacancyListingResponse Listing,
+    DateTimeOffset? PublishedAt,
     IReadOnlyList<PublicRequirementResponse> Requirements);
 
+/// <summary>`alsoCounts` lists the accepted equivalences by name only, never their percentage.</summary>
 internal sealed record PublicRequirementResponse(
     string Type,
     string? Category,
     string Description,
-    string? Condition);
+    string? Condition,
+    IReadOnlyList<string> AlsoCounts);
 
 internal sealed record ChangeApplicationStatusRequest(string? Status, string? Reason);
 
@@ -138,7 +163,16 @@ internal sealed record VacancyApplicationResponse(
     int? ResumeVersion,
     string? ProcessingStatus,
     string? ProcessingError,
-    DateTimeOffset? ResumeCreatedAt);
+    DateTimeOffset? ResumeCreatedAt,
+    string? FileName,
+    string? ContentType,
+    long? SizeBytes,
+    int? Pages,
+    int? JobsRead,
+    int? CertificationsRead,
+    string? DuplicateOf,
+    string? Fulfillment,
+    decimal? Score);
 
 internal sealed record RankApplicationsRequest(IReadOnlyList<Guid>? ApplicationIds);
 
