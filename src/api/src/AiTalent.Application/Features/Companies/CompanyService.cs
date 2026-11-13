@@ -9,6 +9,7 @@ namespace AiTalent.Application.Features.Companies;
 public sealed class CompanyService(
     ICompanyRepository companies,
     IStaffRepository staff,
+    IApplicationRepository applications,
     StaffAccess access,
     IInviteCodes inviteCodes,
     IAuditLog audit,
@@ -17,12 +18,16 @@ public sealed class CompanyService(
     // Same message for every failure so an attacker can't tell expired from tampered codes.
     private const string InvalidCodeMessage = "The invite code is invalid or has expired.";
 
+    // An account is either an applicant or company staff, never both: nobody evaluates their own application.
+    private const string ApplicantAccountMessage = "This account already applied to vacancies as an applicant. Use another e-mail for a company account.";
+
     public async Task<Result<Membership>> CreateAsync(
         Guid userId,
         string? companyName,
         string? sector,
         string? size,
         string? yourName,
+        string? email = null,
         CancellationToken ct = default)
     {
         if (!Validation.IsName(companyName) || !Validation.IsName(yourName))
@@ -48,6 +53,11 @@ public sealed class CompanyService(
         if (await staff.FindByUserIdAsync(userId, ct) is not null)
         {
             return Result<Membership>.Failure(ErrorKind.Conflict, "You already belong to a company.");
+        }
+
+        if (await applications.HasSelfSubmittedAsync(userId, NormalizeEmail(email), ct))
+        {
+            return Result<Membership>.Failure(ErrorKind.Forbidden, ApplicantAccountMessage);
         }
 
         var company = new Company(companyName.Trim(), sector.Trim(), companySize);
@@ -90,7 +100,7 @@ public sealed class CompanyService(
         return Result<InviteCode>.Success(invite);
     }
 
-    public async Task<Result<Membership>> JoinAsync(Guid userId, string? code, string? yourName, CancellationToken ct = default)
+    public async Task<Result<Membership>> JoinAsync(Guid userId, string? code, string? yourName, string? email = null, CancellationToken ct = default)
     {
         if (!Validation.IsName(yourName))
         {
@@ -100,6 +110,11 @@ public sealed class CompanyService(
         if (await staff.FindByUserIdAsync(userId, ct) is not null)
         {
             return Result<Membership>.Failure(ErrorKind.Conflict, "You already belong to a company.");
+        }
+
+        if (await applications.HasSelfSubmittedAsync(userId, NormalizeEmail(email), ct))
+        {
+            return Result<Membership>.Failure(ErrorKind.Forbidden, ApplicantAccountMessage);
         }
 
         var claims = code is null ? null : await inviteCodes.ReadAsync(code.Trim(), ct);
@@ -135,4 +150,7 @@ public sealed class CompanyService(
         return Result<Membership>.Success(
             new Membership(company.Id, company.Name, company.Sector, company.Size, claims.Role));
     }
+
+    private static string? NormalizeEmail(string? email) =>
+        string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLowerInvariant();
 }

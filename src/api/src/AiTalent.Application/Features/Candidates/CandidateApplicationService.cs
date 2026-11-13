@@ -29,6 +29,7 @@ public sealed class CandidateApplicationService(
     ICandidateRepository candidates,
     IResumeRepository resumes,
     IApplicationRepository applications,
+    IStaffRepository staff,
     ICvFileStorage storage,
     IAiEngineClient engine,
     IUnitOfWork unitOfWork)
@@ -44,6 +45,14 @@ public sealed class CandidateApplicationService(
         if (validation.Error is { } validationError)
         {
             return Result<CandidateApplicationReceipt>.Failure(validationError);
+        }
+
+        // An account is either an applicant or company staff: nobody applies to a vacancy they could evaluate.
+        if (command.SubmittedBy is { } userId && await staff.FindByUserIdAsync(userId, ct) is not null)
+        {
+            return Result<CandidateApplicationReceipt>.Failure(
+                ErrorKind.Forbidden,
+                "Company accounts cannot apply to vacancies. Sign in with an applicant account.");
         }
 
         var vacancy = validation.Value!;

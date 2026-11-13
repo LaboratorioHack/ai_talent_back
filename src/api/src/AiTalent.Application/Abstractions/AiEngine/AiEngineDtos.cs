@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 namespace AiTalent.Application.Abstractions.AiEngine;
 
 public sealed record IngestCvRequest(Guid ResumeId, bool FromStorage = true);
@@ -30,7 +33,16 @@ public sealed record StructuredCandidateProfile(
     string ParserStrategy,
     float? OcrConfidence,
     string ExtractorVersion,
-    BiasGuardrailTelemetry? BiasGuardrailTelemetry = null);
+    BiasGuardrailTelemetry? BiasGuardrailTelemetry = null)
+{
+    /// <summary>
+    /// Everything else the engine extracted (work_experience, education, certifications, languages, projects…).
+    /// The API stores the profile again after ingestion, so fields it does not model must survive the round trip:
+    /// without this the stored CV kept only the summary and the skills.
+    /// </summary>
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement>? Extra { get; init; }
+}
 
 public sealed record EvaluateCandidateRequest(
     Guid RoleProfileId,

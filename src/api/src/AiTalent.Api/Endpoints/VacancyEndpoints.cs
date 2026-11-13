@@ -316,8 +316,16 @@ internal static class VacancyEndpoints
                         statusCode: StatusCodes.Status400BadRequest);
                 }
 
-                var name = form["name"].ToString();
-                var email = form["email"].ToString();
+                // The applicant is the signed-in account: the e-mail always comes from the session, never from the
+                // form. The name is the account's (Google/Microsoft profile); the form only fills it in when the
+                // account has none (magic-link sign-up).
+                if (user.Email() is not { } email)
+                {
+                    return Results.Problem(detail: "The session has no e-mail.", statusCode: StatusCodes.Status403Forbidden);
+                }
+
+                var typedName = form["name"].ToString();
+                var name = !string.IsNullOrWhiteSpace(typedName) ? typedName : user.SessionName() ?? NameFromEmail(email);
                 var consent = TryParseConsent(form["consent"].ToString());
 
                 var result = await service.ApplyAsync(
@@ -330,8 +338,7 @@ internal static class VacancyEndpoints
                         file.ContentType,
                         file.Length,
                         file.OpenReadStream,
-                        // Signed in (optional here): the portal will show it even if the e-mail differs.
-                        user.Identity?.IsAuthenticated == true ? user.ToUserId() : null),
+                        user.ToUserId()),
                     ct);
 
                 return result.ToHttpResult(receipt => Results.Created(
@@ -344,21 +351,29 @@ internal static class VacancyEndpoints
                         receipt.DuplicateContent,
                         "Your application was received.")));
             })
-            .AllowAnonymous()
             .RequireRateLimiting(RateLimitPolicies.CandidateApply)
             .DisableAntiforgery()
             .Accepts<IFormFile>("multipart/form-data")
             .WithName("ApplyToVacancy")
             .WithSummary("Submit a CV to a vacancy")
-            .WithDescription("Public endpoint for a candidate to apply to an open vacancy with a single CV (PDF/DOCX, max 10 MB). Requires `name`, `email`, `consent=true`, and `file`. Reapplying to the same vacancy is rejected. Does not return scores or rankings.")
+            .WithDescription("A signed-in applicant applies to an open vacancy with a single CV (PDF/DOCX, max 10 MB). Requires `consent=true` and `file`; the e-mail and the name come from the session (`name` is only read when the account has none). Company staff get 403: an account is either an applicant or staff. Reapplying to the same vacancy is rejected. Does not return scores or rankings.")
             .Produces<CandidateApplicationResponse>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status429TooManyRequests)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         return app;
+    }
+
+    /// <summary>"ana.lopez@correo.co" → "Ana Lopez": last resort for an account without a name.</summary>
+    private static string NameFromEmail(string email)
+    {
+        var words = email.Split('@')[0].Split(['.', '_', '-', '+'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var name = string.Join(' ', words.Select(word => char.ToUpperInvariant(word[0]) + word[1..]));
+        return name.Length > 0 ? name : email;
     }
 
     private static bool TryParseConsent(string? value) =>

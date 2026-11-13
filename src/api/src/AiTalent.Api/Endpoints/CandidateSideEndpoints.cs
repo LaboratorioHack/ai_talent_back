@@ -226,11 +226,11 @@ internal static class CandidateSideEndpoints
         return app;
     }
 
-    private static string? Email(this ClaimsPrincipal user) =>
+    internal static string? Email(this ClaimsPrincipal user) =>
         user.Identity?.IsAuthenticated == true && user.FindFirstValue("email") is { Length: > 0 } email ? email.Trim().ToLowerInvariant() : null;
 
     /// <summary>Supabase puts user_metadata in the token as JSON; the portal only needs a fallback name.</summary>
-    private static string? SessionName(this ClaimsPrincipal user)
+    internal static string? SessionName(this ClaimsPrincipal user)
     {
         var metadata = user.FindFirstValue("user_metadata");
         if (string.IsNullOrWhiteSpace(metadata))
@@ -241,7 +241,16 @@ internal static class CandidateSideEndpoints
         try
         {
             using var document = System.Text.Json.JsonDocument.Parse(metadata);
-            return document.RootElement.TryGetProperty("name", out var name) && name.ValueKind == System.Text.Json.JsonValueKind.String ? name.GetString() : null;
+            // "name" is what Criba saves; Google and Microsoft fill "full_name" (and usually "name" too).
+            foreach (var key in new[] { "name", "full_name" })
+            {
+                if (document.RootElement.TryGetProperty(key, out var name) && name.ValueKind == System.Text.Json.JsonValueKind.String && !string.IsNullOrWhiteSpace(name.GetString()))
+                {
+                    return name.GetString()!.Trim();
+                }
+            }
+
+            return null;
         }
         catch (System.Text.Json.JsonException)
         {

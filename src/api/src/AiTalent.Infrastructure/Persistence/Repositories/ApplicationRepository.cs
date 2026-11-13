@@ -14,6 +14,12 @@ internal sealed class ApplicationRepository(AppDbContext db) : IApplicationRepos
     public Task<ApplicationEntity?> FindByIdAsync(Guid id, CancellationToken ct = default) =>
         db.Applications.FirstOrDefaultAsync(application => application.Id == id, ct);
 
+    public Task<bool> HasSelfSubmittedAsync(Guid userId, string? normalizedEmail, CancellationToken ct = default) =>
+        db.Applications
+            .Where(application => application.Source == Domain.Enums.ApplicationSource.Candidate)
+            .Join(db.Candidates, application => application.CandidateId, candidate => candidate.Id, (application, candidate) => new { application.SubmittedBy, candidate.ContactEmail })
+            .AnyAsync(row => row.SubmittedBy == userId || (normalizedEmail != null && row.ContactEmail.ToLower() == normalizedEmail), ct);
+
     public async Task<IReadOnlyList<ApplicationSubmission>> ListByJobOpeningAsync(Guid jobOpeningId, CancellationToken ct = default)
     {
         var rows = await db.Database.SqlQuery<SubmissionRow>($"""

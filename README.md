@@ -104,7 +104,7 @@ Cada vacante tiene un perfil de cargo versionado con sus requisitos. El perfil s
 | GET | `/api/vacancies/{id}/public` | **Público (sin login).** Página de una vacante abierta: título, área, cierre, plazas, empresa, descripción y requisitos (`type`, `category`, `description`, `condition`). No expone pesos ni equivalencias. Responde 404 si no está `OPEN`, venció el cierre, fue eliminada o no existe. |
 | GET | `/api/vacancies/{id}/applications` | Lista las postulaciones recibidas para la vacante (candidato, estado de selección y estado/procesamiento del CV más reciente). Requiere miembro activo de la empresa. |
 | PATCH | `/api/vacancies/{id}/applications/{applicationId}` | Mueve una postulación por el pipeline: body `{ "status": "SHORTLISTED", "reason": "opcional" }`. Flujo `APPLIED → SHORTLISTED → INTERVIEW → HIRED`; `REJECTED` o `WITHDRAWN` desde cualquier etapa abierta. `REJECTED`, `HIRED` y `WITHDRAWN` son terminales. Movimientos inválidos o a la misma etapa responden 409. Queda registrado en auditoría. Requiere miembro activo de la empresa. |
-| POST | `/api/vacancies/{id}/applications` | **Público (sin login).** Postulación de un candidato con un solo CV (`multipart/form-data`: `file` PDF/DOCX ≤ 10 MB, `name`, `email`, `consent=true`). Solo vacantes `OPEN` y antes del cierre; volver a postular a la misma vacante se rechaza. No devuelve puntajes ni ranking. |
+| POST | `/api/vacancies/{id}/applications` | **Postulante con sesión.** Postulación con un solo CV (`multipart/form-data`: `file` PDF/DOCX ≤ 10 MB y `consent=true`). El correo y el nombre salen de la sesión; `name` solo se lee si la cuenta no tiene nombre. Una cuenta de empresa recibe 403. Solo vacantes `OPEN` y antes del cierre; volver a postular a la misma vacante se rechaza. No devuelve puntajes ni ranking. |
 
 Cada requisito lleva `type` (`MANDATORY`, `DESIRABLE`, `DISQUALIFYING`), `weight` (0–100) y `equivalences` como porcentajes, por ejemplo `{ "AWS": 80 }` para "AWS cuenta 80% de Azure".
 Los conteos de la lista (`resumes`, `meets`, `partiallyMeets`, `doesNotMeet`, `disqualified`, `interviews`) se devuelven en cero hasta que existan la carga de CVs y las evaluaciones.
@@ -130,6 +130,27 @@ Los botones del login y del portal usan `signInWithOAuth` (`google` y `azure`). 
 - **Microsoft**: Microsoft Entra ID → App registrations → New registration, con *Accounts in any organizational directory and personal Microsoft accounts*. Agregar esa URL como Redirect URI (Web), crear un *client secret* y copiar Application (client) ID y el valor del secret en Supabase → **Azure**, con Azure Tenant URL `https://login.microsoftonline.com/common`. En *Token configuration* agregar el claim opcional `email`.
 
 En el portal, el postulante debe entrar con la misma cuenta de correo con la que se postuló: el portal busca sus postulaciones por correo.
+
+### Cuentas de postulante y de empresa
+
+Una cuenta es de postulante o de empresa, nunca las dos: nadie evalúa su propia postulación.
+
+- `POST /api/companies` y `POST /api/companies/join` responden 403 si la cuenta ya se postuló a una vacante (postulación propia, `source = CANDIDATE`, por su sesión o su correo). Un CV que subió un reclutador a nombre de esa persona no cuenta.
+- `POST /api/vacancies/{id}/applications` responde 403 si quien se postula pertenece a una empresa.
+- La web guarda el tipo en `user_metadata.account_type` la primera vez que la persona entra (según por dónde entró) y lo usa solo para llevar a cada cuenta a su lado de la app. La regla que protege los datos es la de la API.
+
+### Hoja de vida generada (formato Harvard)
+
+El motor extrae el perfil completo del CV (`professional_data`: titular, resumen, experiencia con logros, educación, proyectos, liderazgo, reconocimientos, certificaciones, idiomas y habilidades) y `ResumeDocBuilder` lo ordena como la plantilla Harvard: Perfil, Educación, Experiencia, Proyectos, Liderazgo y actividades, Reconocimientos y Habilidades. Una sección solo aparece si el CV traía algo. La institución educativa no se extrae (IA responsable).
+
+Los CV procesados antes del extractor `v1.2.0` solo guardaron el resumen y las habilidades. Para leerlos de nuevo, en el servidor:
+
+```bash
+docker compose exec engine python -m ai_engine.maintenance.reprocess_resumes --dry-run   # cuántos faltan
+docker compose exec engine python -m ai_engine.maintenance.reprocess_resumes --limit 50  # los 50 más recientes
+```
+
+Cada CV cuesta una llamada de extracción y sus embeddings.
 
 ### Configuración necesaria
 
