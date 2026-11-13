@@ -37,6 +37,10 @@ public interface IAiEngineClient
 
     Task<AssistantChatResponse> ChatAsync(AssistantChatRequest request, CancellationToken cancellationToken = default);
 
+    Task<DraftVacancyResponse> DraftVacancyAsync(
+        DraftVacancyRequest request,
+        CancellationToken cancellationToken = default);
+
     Task<SuggestEquivalencesResponse> SuggestEquivalencesAsync(
         SuggestEquivalencesRequest request,
         CancellationToken cancellationToken = default);

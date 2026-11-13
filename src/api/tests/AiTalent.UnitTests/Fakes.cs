@@ -360,6 +360,20 @@ internal sealed class FakeAiEngineClient : IAiEngineClient
 
     public List<ProposeRequirementsRequest> ProposeRequests { get; } = [];
     public List<SuggestEquivalencesRequest> EquivalenceRequests { get; } = [];
+    public List<DraftVacancyRequest> DraftRequests { get; } = [];
+
+    public Task<DraftVacancyResponse> DraftVacancyAsync(DraftVacancyRequest request, CancellationToken cancellationToken = default)
+    {
+        DraftRequests.Add(request);
+        if (ThrowOnAssist is not null)
+        {
+            throw ThrowOnAssist;
+        }
+
+        return Task.FromResult(new DraftVacancyResponse(new VacancyDraftDto(
+            "Game Developer", "Tecnología", "Crearás juegos móviles.", 2, null, null, "REMOTE", null, null, null,
+            [new ProposedRequirementDto("Unity", "MANDATORY", 100, [])])));
+    }
     public Exception? ThrowOnAssist { get; set; }
 
     public Task<ProposeRequirementsResponse> ProposeRequirementsAsync(ProposeRequirementsRequest request, CancellationToken cancellationToken = default)

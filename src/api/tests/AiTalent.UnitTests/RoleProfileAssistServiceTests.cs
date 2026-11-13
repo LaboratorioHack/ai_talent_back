@@ -24,7 +24,12 @@ public class RoleProfileAssistServiceTests
         _actor = new Actor(userId, MfaVerified: false);
     }
 
-    private RoleProfileAssistService CreateService() => new(_engine, new StaffAccess(_staff), _audit);
+    private RoleProfileAssistService CreateService() => new(_engine, new StaffAccess(_staff), _audit, new FixedClock(new DateTimeOffset(2026, 11, 14, 3, 0, 0, TimeSpan.Zero)));
+
+    private sealed class FixedClock(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
 
     [Fact]
     public async Task ProposeSendsCleanDescriptionAndExistingRequirements()
@@ -48,6 +53,38 @@ public class RoleProfileAssistServiceTests
         var existing = Assert.Single(request.Existing);
         Assert.Equal(("C#", "MANDATORY", 10), (existing.Description, existing.Type, existing.Weight));
         Assert.Contains("role_profile.requirements_proposed", _audit.Actions);
+    }
+
+    [Fact]
+    public async Task DraftSendsTheContextWithTodayInBogotaAndTheEditorOptions()
+    {
+        var result = await CreateService().DraftVacancyAsync(
+            _actor,
+            "  Necesitamos dos desarrolladores Unity, remoto, contrato indefinido.  ",
+            ["Tecnología", " Diseño ", ""],
+            ["Término indefinido"],
+            null);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("Game Developer", result.Value!.Draft.Title);
+        var request = Assert.Single(_engine.DraftRequests);
+        Assert.Equal("Necesitamos dos desarrolladores Unity, remoto, contrato indefinido.", request.Context);
+        // 03:00 UTC on Nov 14 is still Nov 13 in Bogotá.
+        Assert.Equal(new DateOnly(2026, 11, 13), request.Today);
+        Assert.Equal(["Tecnología", "Diseño"], request.Areas);
+        Assert.Empty(request.Schedules);
+        Assert.Contains("role_profile.vacancy_drafted", _audit.Actions);
+    }
+
+    [Theory]
+    [InlineData("corto")]
+    [InlineData(null)]
+    public async Task DraftRejectsTooShortContextWithoutCallingEngine(string? context)
+    {
+        var result = await CreateService().DraftVacancyAsync(_actor, context, null, null, null);
+
+        Assert.Equal(ErrorKind.Invalid, result.Error!.Kind);
+        Assert.Empty(_engine.DraftRequests);
     }
 
     [Theory]

@@ -150,6 +150,30 @@ public sealed record SuggestEquivalencesRequest(
 
 public sealed record SuggestEquivalencesResponse(IReadOnlyList<EquivalenceDto> Equivalences);
 
+/// <summary>Free context to turn into a whole vacancy; the lists are the options the editor offers.</summary>
+public sealed record DraftVacancyRequest(
+    string Context,
+    DateOnly Today,
+    IReadOnlyList<string> Areas,
+    IReadOnlyList<string> Contracts,
+    IReadOnlyList<string> Schedules);
+
+/// <summary>A vacancy drafted by the AI. Unknown fields are null; weights add up to 100.</summary>
+public sealed record VacancyDraftDto(
+    string Title,
+    string? Area,
+    string Description,
+    int? Openings,
+    DateOnly? ClosesAt,
+    string? Location,
+    string? Modality,
+    string? Contract,
+    string? Schedule,
+    string? Salary,
+    IReadOnlyList<ProposedRequirementDto> Requirements);
+
+public sealed record DraftVacancyResponse(VacancyDraftDto Draft);
+
 /// <summary>One turn of the Criba AI chat: <c>user</c> or <c>assistant</c>.</summary>
 public sealed record AssistantTurnDto(string Role, string Content);
 
