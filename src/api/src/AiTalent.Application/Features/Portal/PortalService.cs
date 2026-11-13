@@ -281,6 +281,9 @@ public static class Dates
     public static string? Day(DateTimeOffset? value) =>
         value is null ? null : TimeZoneInfo.ConvertTime(value.Value, Bogota).ToString("yyyy-MM-dd");
 
+    /// <summary>The same instant on the Bogotá clock (the server runs in UTC).</summary>
+    public static DateTimeOffset Local(DateTimeOffset value) => TimeZoneInfo.ConvertTime(value, Bogota);
+
     private static TimeZoneInfo FindBogota()
     {
         foreach (var id in new[] { "America/Bogota", "SA Pacific Standard Time" })

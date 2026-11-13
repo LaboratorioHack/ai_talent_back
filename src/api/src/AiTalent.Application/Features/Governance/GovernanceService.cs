@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using AiTalent.Application.Abstractions;
 using AiTalent.Application.Common;
+using AiTalent.Application.Features.Portal;
 using AiTalent.Application.Features.Staff;
 
 namespace AiTalent.Application.Features.Governance;
@@ -59,22 +60,25 @@ public sealed class GovernanceService(
                 humanDecisions,
                 aiErrors),
             Attributes,
-            entries.Select(MapDecision).ToList(),
+            entries.Select(entry => MapDecision(entry, Dates.Local(clock.GetUtcNow()))).ToList(),
             []));
     }
 
-    private static AuditDecisionResponse MapDecision(AuditLogEntry entry)
+    /// <summary>Who the screen shows for engine and agent entries: the AI has a name, not "system".</summary>
+    public const string CribaAi = "Criba AI";
+
+    private static AuditDecisionResponse MapDecision(AuditLogEntry entry, DateTimeOffset now)
     {
         var who = entry.ActorType switch
         {
             "user" => FormatStaffName(entry.ActorName),
-            "engine" or "api" or "agent" => "Sistema",
+            "engine" or "agent" => CribaAi,
             _ => "Sistema",
         };
 
         var (subject, status) = ResolveSubjectAndStatus(entry);
         return new AuditDecisionResponse(
-            FormatWhen(entry.OccurredAt),
+            FormatWhen(entry.OccurredAt, now),
             DescribeAction(entry.Action, entry.DetailsJson),
             who,
             subject,
@@ -92,10 +96,10 @@ public sealed class GovernanceService(
         return parts.Length < 2 ? parts[0] : $"{parts[0]} {parts[1][0]}.";
     }
 
-    private static string FormatWhen(DateTimeOffset occurredAt)
+    internal static string FormatWhen(DateTimeOffset occurredAt, DateTimeOffset now)
     {
-        var local = occurredAt.ToLocalTime();
-        var today = DateTime.Today;
+        var local = Dates.Local(occurredAt);
+        var today = now.Date;
         var date = local.Date;
         if (date == today)
         {
@@ -104,7 +108,7 @@ public sealed class GovernanceService(
 
         if (date == today.AddDays(-1))
         {
-            return "Ayer";
+            return $"Ayer {local:HH:mm}";
         }
 
         var culture = CultureInfo.GetCultureInfo("es-CO");
@@ -122,14 +126,14 @@ public sealed class GovernanceService(
             _ => entry.EntityId ?? entry.Entity,
         };
 
-        var status = entry.Action switch
+        // A result chip only where there is a result: the evaluation's fulfillment, or a rejection.
+        var status = TryReadString(entry.DetailsJson, "fulfillment") switch
         {
-            var action when action.Contains("discard", StringComparison.OrdinalIgnoreCase) => "does_not_meet",
-            var action when action.Contains("interview", StringComparison.OrdinalIgnoreCase) => "meets",
-            var action when action.Contains("profile", StringComparison.OrdinalIgnoreCase) => "unevaluated",
-            var action when action.Contains("false_positive", StringComparison.OrdinalIgnoreCase)
-                || action.Contains("correct", StringComparison.OrdinalIgnoreCase) => "partial",
-            _ => "unevaluated",
+            "MEETS" => "meets",
+            "PARTIALLY_MEETS" => "partial",
+            "DOES_NOT_MEET" => "does_not_meet",
+            _ when TryReadString(entry.DetailsJson, "to") == "REJECTED" => "does_not_meet",
+            _ => "none",
         };
 
         return (subject, status);
@@ -148,7 +152,22 @@ public sealed class GovernanceService(
             "vacancy.profile.created" => "Definió el perfil de cargo",
             "staff.updated" => "Actualizó un miembro del equipo",
             "company.created" => "Creó la organización",
-            _ => TryReadString(detailsJson, "summary") ?? action.Replace('.', ' '),
+            "staff.joined" => "Se unió al equipo",
+            "resume.processed" => "Leyó una hoja de vida",
+            "evaluation.requested" => "Pidió una evaluación",
+            "evaluation.completed" => "Evaluó una hoja de vida",
+            "evaluation.ai_error.flagged" => "Marcó un error de la IA",
+            "ranking.generated" => "Pidió el ranking",
+            "candidates.compared" => "Comparó candidatos",
+            "evidence.searched" => "Buscó evidencia en una hoja de vida",
+            "cv.downloaded" => "Descargó una hoja de vida",
+            "application.stage_changed" => "Cambió la etapa de una postulación",
+            "application.original_requested" => "Pidió la hoja de vida original",
+            "application.withdrawn" => "Retiró su postulación",
+            "application.interview.invited" => "Invitó a entrevista con IA",
+            "candidate.resume.updated" => "Actualizó su hoja de vida",
+            "candidate.erased" => "Borró sus datos",
+            _ => TryReadString(detailsJson, "summary") ?? "Registró una acción",
         };
 
     private static string? TryReadString(string json, string property)
