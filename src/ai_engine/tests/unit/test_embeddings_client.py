@@ -8,6 +8,7 @@ from ai_engine.core.config import Settings
 from ai_engine.core.retry import bounded_retry_delay
 from ai_engine.rag.embeddings.client import (
     EmbeddingsClient,
+    is_daily_quota,
     is_embedding_rate_limit,
     is_retryable_embedding_error,
     reset_nvidia_circuit,
@@ -180,3 +181,9 @@ async def test_embed_texts_requires_openrouter_key() -> None:
     client = EmbeddingsClient(Settings(openrouter_api_key=""))
     with pytest.raises(RuntimeError, match="OPENROUTER_API_KEY"):
         await client.embed_texts(["x"])
+
+
+def test_daily_quota_is_not_retried() -> None:
+    exc = RuntimeError("Error code: 429 - Rate limit exceeded: free-models-per-day.")
+    assert is_daily_quota(exc)
+    assert not is_retryable_embedding_error(exc)
