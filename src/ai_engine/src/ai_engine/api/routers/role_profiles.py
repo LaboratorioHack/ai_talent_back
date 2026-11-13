@@ -1,6 +1,8 @@
 from fastapi import APIRouter, HTTPException
 
 from ai_engine.schemas.role_profile import (
+    DraftVacancyRequest,
+    DraftVacancyResponse,
     ProposeRequirementsRequest,
     ProposeRequirementsResponse,
     SuggestEquivalencesRequest,
@@ -15,6 +17,14 @@ router = APIRouter(prefix="/v1/role-profiles", tags=["role-profiles"])
 async def propose_requirements(body: ProposeRequirementsRequest) -> ProposeRequirementsResponse:
     try:
         return await RoleProfileService().propose(body)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.post("/draft", response_model=DraftVacancyResponse)
+async def draft_vacancy(body: DraftVacancyRequest) -> DraftVacancyResponse:
+    try:
+        return await RoleProfileService().draft_vacancy(body)
     except RuntimeError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 

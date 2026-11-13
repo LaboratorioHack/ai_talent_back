@@ -1,9 +1,11 @@
+from datetime import date
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from ai_engine.agents.profile_assistant.agent import ProfileAssistantAgent
 from ai_engine.schemas.role_profile import (
+    DraftVacancyRequest,
     Equivalence,
     ExistingRequirement,
     ProposedRequirement,
@@ -11,6 +13,7 @@ from ai_engine.schemas.role_profile import (
     ProposeRequirementsResponse,
     SuggestEquivalencesRequest,
     SuggestEquivalencesResponse,
+    VacancyDraft,
 )
 from ai_engine.services.role_profile_service import (
     RoleProfileService,
@@ -129,3 +132,61 @@ async def test_agent_sends_budget_and_existing_and_forbids_protected_attributes(
     assert '"Unity"' in user
     assert model_type is ProposeRequirementsResponse
     assert llm.complete_json.await_args.kwargs["tool_name"] == "propose_requirements"
+
+
+def _draft_request(**overrides) -> DraftVacancyRequest:
+    values = {
+        "context": "Necesitamos 2 desarrolladores Unity para un estudio de juegos móviles, remoto.",
+        "today": date(2026, 11, 13),
+        "areas": ["Tecnología", "Diseño"],
+        "contracts": ["Término indefinido"],
+        "schedules": ["Tiempo completo"],
+    }
+    values.update(overrides)
+    return DraftVacancyRequest(**values)
+
+
+@pytest.mark.asyncio
+async def test_draft_vacancy_keeps_the_draft_inside_what_the_editor_accepts() -> None:
+    agent = MagicMock(spec=ProfileAssistantAgent)
+    agent.draft_vacancy = AsyncMock(
+        return_value=VacancyDraft(
+            title="  Desarrollador   Unity ",
+            area="tecnología",
+            description="Crearás juegos móviles.",
+            openings=80,
+            closes_at=date(2026, 11, 1),
+            modality="REMOTE",
+            contract="Freelance",
+            schedule="tiempo completo",
+            requirements=[
+                _requirement("Unity", "DESIRABLE", 30),
+                _requirement("C#", "DESIRABLE", 30),
+                _requirement("unity", "DESIRABLE", 10),
+                _requirement("Sin portafolio", "DISQUALIFYING", 40),
+            ],
+        )
+    )
+
+    result = await RoleProfileService(agent).draft_vacancy(_draft_request())
+
+    draft = result.draft
+    assert draft.title == "Desarrollador Unity"
+    assert draft.area == "Tecnología"
+    assert draft.openings is None
+    assert draft.closes_at is None
+    assert draft.contract is None
+    assert draft.schedule == "Tiempo completo"
+    assert [r.description for r in draft.requirements] == ["Unity", "C#", "Sin portafolio"]
+    assert draft.requirements[0].type == "MANDATORY"
+    assert sum(r.weight for r in draft.requirements if r.type != "DISQUALIFYING") == 100
+    assert draft.requirements[2].weight == 0
+
+
+@pytest.mark.asyncio
+async def test_draft_vacancy_without_requirements_is_an_error() -> None:
+    agent = MagicMock(spec=ProfileAssistantAgent)
+    agent.draft_vacancy = AsyncMock(return_value=VacancyDraft(title="Algo"))
+
+    with pytest.raises(RuntimeError):
+        await RoleProfileService(agent).draft_vacancy(_draft_request())

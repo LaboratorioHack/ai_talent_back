@@ -188,6 +188,12 @@ internal sealed record ProposeRequirementsApiRequest(
     string? Area,
     IReadOnlyList<ExistingRequirementApiRequest>? Existing);
 
+internal sealed record DraftVacancyApiRequest(
+    string? Context,
+    IReadOnlyList<string>? Areas,
+    IReadOnlyList<string>? Contracts,
+    IReadOnlyList<string>? Schedules);
+
 internal sealed record SuggestEquivalencesApiRequest(
     string? Requirement,
     string? Title,

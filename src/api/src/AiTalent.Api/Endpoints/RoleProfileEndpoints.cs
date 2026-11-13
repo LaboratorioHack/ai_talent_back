@@ -31,6 +31,23 @@ internal static class RoleProfileEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
+        profiles.MapPost("draft", async (
+                DraftVacancyApiRequest request,
+                ClaimsPrincipal user,
+                RoleProfileAssistService service,
+                CancellationToken ct) =>
+            {
+                var result = await service.DraftVacancyAsync(user.ToActor(), request.Context, request.Areas, request.Contracts, request.Schedules, ct);
+                return result.ToHttpResult(Results.Ok);
+            })
+            .WithName("DraftVacancy")
+            .WithSummary("Draft a whole vacancy from free context")
+            .WithDescription("The AI Engine (`/v1/role-profiles/draft`) reads free `context` (20–8000 characters: a pasted job ad, notes or a few lines) and drafts the vacancy: `title`, `area` (one of `areas`), `description`, `openings` (1–50), `closesAt` (a future date), `location`, `modality` (ONSITE, HYBRID, REMOTE), `contract` (one of `contracts`), `schedule` (one of `schedules`), `salary` and 3 to 8 `requirements` whose MANDATORY/DESIRABLE weights add up to 100. Fields the context does not state come back null; nothing is invented or saved. Never uses protected attributes. Any active staff member.")
+            .Produces<DraftVacancyResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         profiles.MapPost("equivalences", async (
                 SuggestEquivalencesApiRequest request,
                 ClaimsPrincipal user,
