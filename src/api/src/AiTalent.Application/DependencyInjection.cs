@@ -39,7 +39,8 @@ public static class DependencyInjection
         services.AddScoped<CandidateInterviewService>();
         services.AddScoped<ApplicationActionsService>();
         services.AddScoped<ApplicantResumeService>();
-        services.AddScoped<PortalLinkService>();
+        // Desactivado: los enlaces de entrada los manda Supabase Auth (ver CandidateSideEndpoints).
+        // services.AddScoped<PortalLinkService>();
         services.TryAddSingleton(TimeProvider.System);
         return services;
     }
