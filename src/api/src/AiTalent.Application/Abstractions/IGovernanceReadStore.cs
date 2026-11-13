@@ -9,7 +9,9 @@ public sealed record AuditLogEntry(
     string Entity,
     string? EntityId,
     string DetailsJson,
-    string? ActorName);
+    string? ActorName,
+    // What the entry is about, by name: the vacancy title or the candidate (null when there is none).
+    string? SubjectName = null);
 
 public interface IGovernanceReadStore
 {

@@ -17,7 +17,17 @@ internal sealed class GovernanceReadStore(AppDbContext db) : IGovernanceReadStor
               al.entity,
               al.entity_id,
               al.details::text,
-              iv.name
+              iv.name,
+              coalesce(
+                (select jo.title from app.job_openings jo where al.entity = 'job_opening' and jo.id::text = al.entity_id),
+                (select c.name from app.evaluations e
+                   join app.applications a on a.id = e.application_id
+                   join app.candidates c on c.id = a.candidate_id
+                 where al.entity = 'evaluation' and e.id::text = al.entity_id),
+                (select c.name from app.applications a
+                   join app.candidates c on c.id = a.candidate_id
+                 where al.entity = 'application' and a.id::text = al.entity_id)
+              ) as subject_name
             from app.audit_log al
             left join app.interviewers iv on iv.user_id = al.actor_id
             where (
@@ -81,7 +91,8 @@ internal sealed class GovernanceReadStore(AppDbContext db) : IGovernanceReadStor
                     reader.GetString(5),
                     await reader.IsDBNullAsync(6, ct) ? null : reader.GetString(6),
                     reader.IsDBNull(7) ? "{}" : reader.GetString(7),
-                    await reader.IsDBNullAsync(8, ct) ? null : reader.GetString(8)));
+                    await reader.IsDBNullAsync(8, ct) ? null : reader.GetString(8),
+                    await reader.IsDBNullAsync(9, ct) ? null : reader.GetString(9)));
             }
 
             return rows;
