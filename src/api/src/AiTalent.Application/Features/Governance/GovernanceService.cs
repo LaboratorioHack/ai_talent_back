@@ -118,12 +118,13 @@ public sealed class GovernanceService(
 
     private static (string Subject, string Status) ResolveSubjectAndStatus(AuditLogEntry entry)
     {
-        string subject = entry.Entity switch
+        string subject = entry.SubjectName ?? entry.Entity switch
         {
             "job_opening" => TryReadString(entry.DetailsJson, "title") ?? "Vacante",
             "application" => TryReadString(entry.DetailsJson, "candidate") ?? "Postulación",
             "evaluation" => TryReadString(entry.DetailsJson, "candidate") ?? "Evaluación",
-            _ => entry.EntityId ?? entry.Entity,
+            "company" => "Tu organización",
+            _ => "Registro",
         };
 
         // A result chip only where there is a result: the evaluation's fulfillment, or a rejection.
@@ -167,6 +168,9 @@ public sealed class GovernanceService(
             "application.interview.invited" => "Invitó a entrevista con IA",
             "candidate.resume.updated" => "Actualizó su hoja de vida",
             "candidate.erased" => "Borró sus datos",
+            "role_profile.requirements_proposed" => "Pidió a Criba AI proponer requisitos",
+            "role_profile.equivalences_suggested" => "Pidió a Criba AI equivalencias",
+            "invite_code.created" => "Creó un código de invitación",
             _ => TryReadString(detailsJson, "summary") ?? "Registró una acción",
         };
 
