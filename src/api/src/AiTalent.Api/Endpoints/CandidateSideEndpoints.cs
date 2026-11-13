@@ -13,6 +13,8 @@ internal sealed record ScheduleTeamInterviewRequest(DateOnly? Date, string? Time
 
 internal sealed record AiErrorRequest(string? Kind, Guid? RequirementId, string? Note);
 
+internal sealed record PortalLinkRequest(string? Email);
+
 /// <summary>
 /// The candidate side: the public board and the interview link (no session), the applicant portal
 /// (magic-link session, identified by its e-mail) and the recruiter actions that reach the candidate.
@@ -49,6 +51,18 @@ internal static class CandidateSideEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
+
+        app.MapPost("/api/public/portal-link", async (PortalLinkRequest request, HttpRequest http, IConfiguration configuration, IHostEnvironment environment, PortalLinkService service, CancellationToken ct) =>
+                (await service.SendAsync(request.Email, TrustedAppOrigin(http, configuration, environment), ct)).ToHttpResult(_ => Results.NoContent()))
+            .AllowAnonymous()
+            .RequireRateLimiting(RateLimitPolicies.CandidateApply)
+            .WithName("SendPortalLink")
+            .WithSummary("E-mail the applicant portal sign-in link (public)")
+            .WithDescription("Creates a one-time Supabase magic-link token and e-mails it through Criba's SMTP, so it does not depend on Supabase's shared e-mail limit. The link opens `/auth/confirm` on the web app. Always 204 for a valid e-mail; it never reveals whether an account existed.")
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         var me = app.MapGroup("/api/me");
 
@@ -149,11 +163,12 @@ internal static class CandidateSideEndpoints
                 InviteToInterviewRequest request,
                 HttpRequest http,
                 IConfiguration configuration,
+                IHostEnvironment environment,
                 ClaimsPrincipal user,
                 CandidateInterviewService service,
                 CancellationToken ct) =>
             {
-                var input = new InviteToInterviewInput(request.ExpiresAt, request.Language, request.Notify ?? true, LinkBase(http, configuration));
+                var input = new InviteToInterviewInput(request.ExpiresAt, request.Language, request.Notify ?? true, TrustedAppOrigin(http, configuration, environment));
                 return (await service.InviteAsync(user.ToUserId(), id, applicationId, input, ct)).ToHttpResult(Results.Ok);
             })
             .WithName("InviteToInterview")
@@ -223,24 +238,24 @@ internal static class CandidateSideEndpoints
     private static IResult NoEmail() =>
         Results.Problem(detail: "The session has no e-mail.", statusCode: StatusCodes.Status403Forbidden);
 
-    /// <summary>Where the candidate opens the link: PUBLIC_APP_URL, else the web app that made the request.</summary>
-    private static string LinkBase(HttpRequest http, IConfiguration configuration)
+    /// <summary>
+    /// Origin for links that carry a sign-in token. Never taken from a header in production: an attacker could
+    /// set Origin to their own site and receive the token. Only PUBLIC_APP_URL, or localhost while developing.
+    /// </summary>
+    private static string TrustedAppOrigin(HttpRequest http, IConfiguration configuration, IHostEnvironment environment)
     {
         if (configuration["PUBLIC_APP_URL"] is { Length: > 0 } configured)
         {
             return configured;
         }
 
-        if (Uri.TryCreate(http.Headers.Origin.ToString(), UriKind.Absolute, out var origin))
+        if (environment.IsDevelopment()
+            && Uri.TryCreate(http.Headers.Origin.ToString(), UriKind.Absolute, out var origin)
+            && origin.IsLoopback)
         {
             return origin.GetLeftPart(UriPartial.Authority);
         }
 
-        if (Uri.TryCreate(http.Headers.Referer.ToString(), UriKind.Absolute, out var referer))
-        {
-            return referer.GetLeftPart(UriPartial.Authority);
-        }
-
-        return $"{http.Scheme}://{http.Host}";
+        return "http://localhost:3000";
     }
 }

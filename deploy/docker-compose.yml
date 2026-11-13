@@ -42,6 +42,9 @@ services:
     environment:
       ASPNETCORE_URLS: http://+:8080
       SUPABASE_URL: ${SUPABASE_URL}
+      # Applicant magic links (Auth admin API) and links in e-mails point to the app's public origin.
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      PUBLIC_APP_URL: https://${APP_DOMAIN:-app.${DOMAIN}}
       INVITES__SIGNINGKEY: ${INVITES__SIGNINGKEY}
       ConnectionStrings__Supabase: ${API_DB_CONNECTION_STRING}
       AiEngine__BaseUrl: http://engine:8000/
