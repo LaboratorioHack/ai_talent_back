@@ -35,7 +35,7 @@ services:
     tmpfs: ["/tmp", "/app/.next/cache:uid=1000,gid=1000"]   # Next.js cache needs a writable dir
     environment:
       # Server Components call the API over the internal network; the browser uses /api through Caddy.
-      API_INTERNAL_URL: http://api:8080/api
+      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:8080/api}
     expose: ["3000"]
 
   api:
@@ -47,7 +47,7 @@ services:
       SUPABASE_URL: ${SUPABASE_URL}
       # Applicant magic links (Auth admin API) and links in e-mails point to the app's public origin.
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
-      PUBLIC_APP_URL: https://${APP_DOMAIN:-app.${DOMAIN}}
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL:-https://${APP_DOMAIN:-app.${DOMAIN}}}
       INVITES__SIGNINGKEY: ${INVITES__SIGNINGKEY}
       ConnectionStrings__Supabase: ${API_DB_CONNECTION_STRING}
       AiEngine__BaseUrl: http://engine:8000/
