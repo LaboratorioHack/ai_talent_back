@@ -73,6 +73,22 @@ class LlmClient:
         message = await self._with_retry(_once)
         return _text_from_message(message)
 
+    async def complete_chat(
+        self, system: str, messages: list[dict[str, str]], *, max_tokens: int = 1024
+    ) -> str:
+        """A multi-turn conversation (``role``/``content`` turns, the last one from the user)."""
+
+        async def _once() -> Any:
+            return await self._client.messages.create(
+                model=self.text_model,
+                max_tokens=max_tokens,
+                system=system,
+                messages=messages,
+            )
+
+        message = await self._with_retry(_once)
+        return _text_from_message(message)
+
     async def complete_json(
         self,
         system: str,
