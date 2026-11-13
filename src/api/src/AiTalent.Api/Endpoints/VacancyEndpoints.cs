@@ -8,8 +8,6 @@ namespace AiTalent.Api.Endpoints;
 
 internal static class VacancyEndpoints
 {
-    private static readonly VacancyCountsResponse ZeroCounts = new(0, 0, 0, 0, 0, 0);
-
     public static IEndpointRouteBuilder MapVacancyEndpoints(this IEndpointRouteBuilder app)
     {
         var vacancies = app.MapGroup("/api/vacancies");
@@ -38,14 +36,14 @@ internal static class VacancyEndpoints
 
                 var result = await service.ListAsync(user.ToActor(), parsedStatus, q, page, pageSize, ct);
                 return result.ToHttpResult(pageResult => Results.Ok(new VacancyPageResponse(
-                    pageResult.Items.Select(ToSummary).ToList(),
+                    pageResult.Items.Select(item => ToSummary(item, pageResult.CountsFor(item.Id))).ToList(),
                     pageResult.Page,
                     pageResult.PageSize,
                     pageResult.Total)));
             })
             .WithName("ListVacancies")
             .WithSummary("List vacancies")
-            .WithDescription("Lists the caller's company vacancies, newest first. Filters: `status` (DRAFT, OPEN, CLOSED), `q` (title or area), and pagination with `page`/`pageSize` (default 1/20, max 100). Counts stay zero until CVs and evaluations exist.")
+            .WithDescription("Lists the caller's company vacancies, newest first. Filters: `status` (DRAFT, OPEN, CLOSED), `q` (title or area), and pagination with `page`/`pageSize` (default 1/20, max 100). `counts` are real: `resumes` counts applications (withdrawn excluded); `meets`, `partiallyMeets` and `doesNotMeet` come from each application's latest completed evaluation, `disqualified` is counted apart, and `interviews` counts applications in the INTERVIEW stage.")
             .Produces<VacancyPageResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden);
@@ -200,6 +198,23 @@ internal static class VacancyEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        vacancies.MapGet("{id:guid}/public", async (
+                Guid id,
+                PublicVacancyService service,
+                CancellationToken ct) =>
+            {
+                var result = await service.GetAsync(id, ct);
+                return result.ToHttpResult(publicVacancy => Results.Ok(ToPublic(publicVacancy)));
+            })
+            .AllowAnonymous()
+            .RequireRateLimiting(RateLimitPolicies.PublicRead)
+            .WithName("GetPublicVacancy")
+            .WithSummary("Get an open vacancy (public)")
+            .WithDescription("Public page of a vacancy that is accepting applications (OPEN and before its closing date). Returns the title, area, closing date, company name, description and requirements (type, category, description, condition). Weights and equivalences are not exposed. Anything else returns 404.")
+            .Produces<PublicVacancyResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status429TooManyRequests);
+
         vacancies.MapGet("{id:guid}/applications", async (
                 Guid id,
                 ClaimsPrincipal user,
@@ -228,6 +243,44 @@ internal static class VacancyEndpoints
             .Produces<IReadOnlyList<VacancyApplicationResponse>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
+
+        vacancies.MapPatch("{id:guid}/applications/{applicationId:guid}", async (
+                Guid id,
+                Guid applicationId,
+                ChangeApplicationStatusRequest request,
+                ClaimsPrincipal user,
+                ApplicationStageService service,
+                CancellationToken ct) =>
+            {
+                if (request.Status is null || !ApiExtensions.TryParseApplicationStatus(request.Status, out var status))
+                {
+                    return Results.Problem(
+                        detail: "Status must be APPLIED, SHORTLISTED, INTERVIEW, REJECTED, HIRED or WITHDRAWN.",
+                        statusCode: StatusCodes.Status400BadRequest);
+                }
+
+                var result = await service.ChangeStatusAsync(
+                    user.ToUserId(),
+                    id,
+                    applicationId,
+                    status,
+                    request.Reason,
+                    ct);
+                return result.ToHttpResult(application => Results.Ok(new ApplicationStageResponse(
+                    application.Id,
+                    id,
+                    application.CandidateId,
+                    application.SelectionStatus.ToString().ToUpperInvariant(),
+                    application.UpdatedAt)));
+            })
+            .WithName("ChangeApplicationStatus")
+            .WithSummary("Move an application to another stage")
+            .WithDescription("Moves an application through the selection pipeline. The pipeline is APPLIED → SHORTLISTED → INTERVIEW → HIRED, and REJECTED or WITHDRAWN can be set from any open stage (APPLIED, SHORTLISTED, INTERVIEW). REJECTED, HIRED and WITHDRAWN are terminal. Same-stage or skipped moves return 409. An optional `reason` (max 500 characters) is stored in the audit log. Company-scoped.")
+            .Produces<ApplicationStageResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         vacancies.MapPost("{id:guid}/applications", async (
                 Guid id,
@@ -337,7 +390,16 @@ internal static class VacancyEndpoints
         return true;
     }
 
-    private static VacancySummaryResponse ToSummary(JobOpening vacancy) =>
+    private static VacancyCountsResponse ToResponse(VacancyCounts counts) =>
+        new(
+            counts.Resumes,
+            counts.Meets,
+            counts.PartiallyMeets,
+            counts.DoesNotMeet,
+            counts.Disqualified,
+            counts.Interviews);
+
+    private static VacancySummaryResponse ToSummary(JobOpening vacancy, VacancyCounts counts) =>
         new(
             vacancy.Id,
             vacancy.Title,
@@ -346,7 +408,7 @@ internal static class VacancyEndpoints
             vacancy.ClosingAt,
             vacancy.Positions,
             vacancy.CurrentProfile?.Version,
-            ZeroCounts,
+            ToResponse(counts),
             vacancy.CreatedAt,
             vacancy.UpdatedAt);
 
@@ -371,9 +433,32 @@ internal static class VacancyEndpoints
             profile?.WeightTotal ?? 0m,
             detail.ProfileInUse,
             requirements,
-            ZeroCounts,
+            ToResponse(detail.Counts),
             vacancy.CreatedAt,
             vacancy.UpdatedAt);
+    }
+
+    private static PublicVacancyResponse ToPublic(PublicVacancy publicVacancy)
+    {
+        var vacancy = publicVacancy.Vacancy;
+        var profile = vacancy.CurrentProfile;
+        var requirements = profile is null
+            ? new List<PublicRequirementResponse>()
+            : profile.Requirements.Select(requirement => new PublicRequirementResponse(
+                requirement.Type.ToString().ToUpperInvariant(),
+                requirement.Category,
+                requirement.Description,
+                requirement.Condition)).ToList();
+
+        return new PublicVacancyResponse(
+            vacancy.Id,
+            vacancy.Title,
+            vacancy.Area,
+            vacancy.ClosingAt,
+            vacancy.Positions,
+            publicVacancy.CompanyName,
+            profile?.Description,
+            requirements);
     }
 
     private static RequirementResponse ToResponse(Requirement requirement) =>

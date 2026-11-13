@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from scalar_fastapi import add_scalar_reference
 
 from ai_engine.api.openapi import configure_openapi
-from ai_engine.api.routers import cvs, evaluations, health, rag
+from ai_engine.api.routers import cvs, evaluations, health, rag, role_profiles
 from ai_engine.core.config import get_settings
 from ai_engine.core.security import require_internal_api_key
 from ai_engine.persistence.db import close_pool
@@ -58,3 +58,4 @@ protected = [Depends(require_internal_api_key)]
 app.include_router(cvs.router, dependencies=protected)
 app.include_router(evaluations.router, dependencies=protected)
 app.include_router(rag.router, dependencies=protected)
+app.include_router(role_profiles.router, dependencies=protected)

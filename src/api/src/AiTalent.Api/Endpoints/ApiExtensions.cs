@@ -8,6 +8,7 @@ internal static class RateLimitPolicies
 {
     public const string InviteJoin = "invite-join";
     public const string CandidateApply = "candidate-apply";
+    public const string PublicRead = "public-read";
 }
 
 internal static class ApiExtensions
@@ -24,6 +25,9 @@ internal static class ApiExtensions
         Enum.TryParse(value, ignoreCase: true, out role) && Enum.IsDefined(role);
 
     public static bool TryParseVacancyStatus(string value, out JobOpeningStatus status) =>
+        Enum.TryParse(value, ignoreCase: true, out status) && Enum.IsDefined(status);
+
+    public static bool TryParseApplicationStatus(string value, out ApplicationSelectionStatus status) =>
         Enum.TryParse(value, ignoreCase: true, out status) && Enum.IsDefined(status);
 
     public static bool TryParseRequirementType(string value, out RequirementType type) =>
