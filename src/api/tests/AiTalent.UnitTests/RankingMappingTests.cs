@@ -1,3 +1,4 @@
+using AiTalent.Application.Abstractions;
 using AiTalent.Application.Features.Rankings;
 using AiTalent.Domain.Entities;
 using AiTalent.Domain.Enums;
@@ -32,5 +33,21 @@ public class RankingMappingTests
         var closing = new DateTimeOffset(2026, 11, 30, 23, 59, 59, TimeSpan.FromHours(-5));
 
         Assert.Equal("2026-11-30", RankingMapping.ToIsoDate(closing));
+    }
+
+    [Fact]
+    public void Order_PutsDisqualifiedLastThenScoreThenConfidence()
+    {
+        static VacancyEvaluationSnapshot Snapshot(string name, decimal score, decimal confidence, bool disqualified = false) =>
+            new(Guid.NewGuid(), Guid.NewGuid(), name, "CANDIDATE", Guid.NewGuid(), Guid.NewGuid(), score, "MEETS", disqualified, confidence, DateTimeOffset.UtcNow, null, []);
+
+        var ordered = RankingService.Order([
+            Snapshot("descalificada", 99, 0.9m, disqualified: true),
+            Snapshot("media", 70, 0.9m),
+            Snapshot("alta-baja-confianza", 88, 0.7m),
+            Snapshot("alta", 88, 0.9m),
+        ]);
+
+        Assert.Equal(["alta", "alta-baja-confianza", "media", "descalificada"], ordered.Select(snapshot => snapshot.CandidateName));
     }
 }

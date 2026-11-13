@@ -12,11 +12,10 @@ public class RankingServiceTests
     private readonly FakeStaffRepository _staff = new();
     private readonly FakeJobOpeningRepository _vacancies = new();
     private readonly FakeEvaluationReadStore _evaluations = new();
-    private readonly FakeAiEngineClient _engine = new();
     private readonly Guid _companyId = Guid.NewGuid();
 
     private RankingService CreateService() =>
-        new(_vacancies, _evaluations, _engine, new StaffAccess(_staff));
+        new(_vacancies, _evaluations, new StaffAccess(_staff));
 
     private Actor AddMember()
     {
@@ -26,7 +25,7 @@ public class RankingServiceTests
     }
 
     [Fact]
-    public async Task GetByVacancy_uses_engine_ranking_order()
+    public async Task GetByVacancy_orders_stored_evaluations_without_reevaluating()
     {
         var actor = AddMember();
         var vacancy = new JobOpening(_companyId, actor.UserId, "Cloud Senior", "Tecnología", null, 1);
@@ -40,8 +39,8 @@ public class RankingServiceTests
         var resumeHigh = Guid.NewGuid();
         _evaluations.ByVacancy[(vacancy.Id, profile.Id)] =
         [
-            Snapshot(resumeHigh, "Alta", 92),
             Snapshot(resumeLow, "Baja", 55),
+            Snapshot(resumeHigh, "Alta", 92),
         ];
 
         var result = await CreateService().GetByVacancyAsync(actor.UserId, vacancy.Id, default);
