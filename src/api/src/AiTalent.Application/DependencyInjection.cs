@@ -1,11 +1,11 @@
 using AiTalent.Application.Features.Auth;
 using AiTalent.Application.Features.Candidates;
 using AiTalent.Application.Features.Companies;
+using AiTalent.Application.Features.Dashboard;
+using AiTalent.Application.Features.Evaluations;
 using AiTalent.Application.Features.Governance;
 using AiTalent.Application.Features.Interviews;
 using AiTalent.Application.Features.Rankings;
-using AiTalent.Application.Features.Dashboard;
-using AiTalent.Application.Features.Evaluations;
 using AiTalent.Application.Features.RoleProfiles;
 using AiTalent.Application.Features.Staff;
 using AiTalent.Application.Features.Vacancies;
