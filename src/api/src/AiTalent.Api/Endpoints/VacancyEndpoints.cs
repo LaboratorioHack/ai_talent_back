@@ -286,7 +286,7 @@ internal static class VacancyEndpoints
             })
             .WithName("ChangeApplicationStatus")
             .WithSummary("Move an application to another stage")
-            .WithDescription("Moves an application through the selection pipeline. The pipeline is APPLIED → SHORTLISTED → INTERVIEW → HIRED, and REJECTED or WITHDRAWN can be set from any open stage (APPLIED, SHORTLISTED, INTERVIEW). REJECTED, HIRED and WITHDRAWN are terminal. Same-stage or skipped moves return 409. An optional `reason` (max 500 characters) is stored in the audit log. Company-scoped.")
+            .WithDescription("Moves an application through the selection pipeline. The pipeline is APPLIED → SHORTLISTED → INTERVIEW → HIRED (one step back is allowed between open stages, to undo a move), and REJECTED or WITHDRAWN can be set from any open stage (APPLIED, SHORTLISTED, INTERVIEW). REJECTED, HIRED and WITHDRAWN are terminal. Same-stage or skipped moves return 409. An optional `reason` (max 500 characters) is stored in the audit log. Company-scoped.")
             .Produces<ApplicationStageResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)

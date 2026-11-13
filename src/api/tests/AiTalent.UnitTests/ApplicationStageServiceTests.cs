@@ -88,7 +88,22 @@ public class ApplicationStageServiceTests
     }
 
     [Theory]
+    [InlineData(ApplicationSelectionStatus.Shortlisted, ApplicationSelectionStatus.Applied)]
+    [InlineData(ApplicationSelectionStatus.Interview, ApplicationSelectionStatus.Shortlisted)]
+    public async Task AllowsOneStepBackToUndoAMove(ApplicationSelectionStatus from, ApplicationSelectionStatus to)
+    {
+        var actor = AddMember();
+        var application = AddApplication(from);
+
+        var result = await CreateService().ChangeStatusAsync(actor.UserId, _vacancy.Id, application.Id, to, null);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(to, application.SelectionStatus);
+    }
+
+    [Theory]
     [InlineData(ApplicationSelectionStatus.Applied, ApplicationSelectionStatus.Interview)]
+    [InlineData(ApplicationSelectionStatus.Interview, ApplicationSelectionStatus.Applied)]
     [InlineData(ApplicationSelectionStatus.Applied, ApplicationSelectionStatus.Hired)]
     [InlineData(ApplicationSelectionStatus.Applied, ApplicationSelectionStatus.Applied)]
     [InlineData(ApplicationSelectionStatus.Shortlisted, ApplicationSelectionStatus.Hired)]
