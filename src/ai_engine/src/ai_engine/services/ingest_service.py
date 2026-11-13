@@ -7,7 +7,7 @@ import hashlib
 import uuid
 from typing import BinaryIO
 
-from ai_engine.anonymization.sanitizer import anonymize_cv_text_with_report
+from ai_engine.anonymization.sanitizer import anonymize_cv_text_with_report, anonymize_pages
 from ai_engine.core.config import get_settings
 from ai_engine.core.llm import LlmClient
 from ai_engine.extraction.extractor import extract_profile
@@ -95,7 +95,8 @@ class IngestService:
     ) -> CvIngestResponse:
         settings = get_settings()
         anonymized, sanitization = anonymize_cv_text_with_report(raw_text)
-        chunks = chunk_cv_text(anonymized, pages=page_tuples or None)
+        pages = anonymize_pages(raw_text, page_tuples) if page_tuples else None
+        chunks = chunk_cv_text(anonymized, pages=pages)
         texts = [c.content for c in chunks]
 
         profile, batch = await asyncio.gather(

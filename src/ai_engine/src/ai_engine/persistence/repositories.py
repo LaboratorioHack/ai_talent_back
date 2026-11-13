@@ -411,12 +411,32 @@ async def list_resume_fragments(resume_id: uuid.UUID) -> list[dict[str, Any]]:
         return list(await cur.fetchall())
 
 
+async def resume_embedding_model(resume_id: uuid.UUID) -> str | None:
+    """The model that embedded this CV's fragments (one batch at ingest, so one model)."""
+    async with connection() as conn:
+        cur = await conn.execute(
+            """
+            select embedding_model
+            from app.resume_fragments
+            where resume_id = %s and embedding is not null and embedding_model is not null
+            group by embedding_model
+            order by count(*) desc
+            limit 1
+            """,
+            (resume_id,),
+        )
+        row = await cur.fetchone()
+        return row["embedding_model"] if row else None
+
+
 async def search_fragments_by_embedding(
     resume_id: uuid.UUID,
     query_embedding: list[float],
     *,
+    model: str,
     limit: int = 8,
 ) -> list[dict[str, Any]]:
+    """Nearest fragments embedded with ``model`` (vectors of different models do not compare)."""
     async with connection() as conn:
         cur = await conn.execute(
             """
@@ -424,11 +444,11 @@ async def search_fragments_by_embedding(
                    embedding_model,
                    1 - (embedding <=> %s::extensions.vector) as similarity
             from app.resume_fragments
-            where resume_id = %s and embedding is not null
+            where resume_id = %s and embedding is not null and embedding_model = %s
             order by embedding <=> %s::extensions.vector
             limit %s
             """,
-            (query_embedding, resume_id, query_embedding, limit),
+            (query_embedding, resume_id, model, query_embedding, limit),
         )
         return list(await cur.fetchall())
 
