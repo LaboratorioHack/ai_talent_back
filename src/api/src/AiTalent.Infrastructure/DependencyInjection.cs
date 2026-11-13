@@ -8,6 +8,7 @@ using AiTalent.Infrastructure.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
 
 namespace AiTalent.Infrastructure;
@@ -28,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<IEvaluationReadStore, EvaluationReadStore>();
         services.AddScoped<IInterviewReadStore, InterviewReadStore>();
         services.AddScoped<IGovernanceReadStore, GovernanceReadStore>();
+        services.AddScoped<IVacancyInsights, VacancyInsights>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IAuditLog, AuditLog>();
         services.AddScoped<ICvFileStorage, CvFileStorage>();
@@ -48,8 +50,18 @@ public static class DependencyInjection
                 var options = sp.GetRequiredService<IOptions<AiEngineOptions>>().Value;
                 client.BaseAddress = options.BaseUrl;
                 client.DefaultRequestHeaders.Add("X-Internal-Api-Key", options.ApiKey);
+                // The resilience pipeline below owns the timeouts.
+                client.Timeout = Timeout.InfiniteTimeSpan;
             })
-            .AddStandardResilienceHandler();
+            .AddStandardResilienceHandler(resilience =>
+            {
+                // Evaluations call an LLM per CV and rank runs them one after another: the 10 s / 30 s defaults cut them off.
+                resilience.AttemptTimeout.Timeout = TimeSpan.FromMinutes(2);
+                resilience.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(10);
+                resilience.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(5);
+                // Evaluate, rank and compare write evaluations and spend LLM calls: never retry a POST.
+                resilience.Retry.DisableForUnsafeHttpMethods();
+            });
 
         // Agents/Interview: agente de entrevista con Microsoft Agent Framework + Anthropic (pendiente).
         return services;

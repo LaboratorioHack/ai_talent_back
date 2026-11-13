@@ -4,9 +4,12 @@ using AiTalent.Application.Features.Companies;
 using AiTalent.Application.Features.Governance;
 using AiTalent.Application.Features.Interviews;
 using AiTalent.Application.Features.Rankings;
+using AiTalent.Application.Features.Dashboard;
+using AiTalent.Application.Features.Evaluations;
 using AiTalent.Application.Features.Staff;
 using AiTalent.Application.Features.Vacancies;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace AiTalent.Application;
 
@@ -20,11 +23,16 @@ public static class DependencyInjection
         services.AddScoped<CompanyService>();
         services.AddScoped<StaffService>();
         services.AddScoped<VacancyService>();
+        services.AddScoped<PublicVacancyService>();
         services.AddScoped<CandidateApplicationService>();
         services.AddScoped<ApplicationListService>();
         services.AddScoped<RankingService>();
         services.AddScoped<InterviewService>();
         services.AddScoped<GovernanceService>();
+        services.AddScoped<ApplicationStageService>();
+        services.AddScoped<EvaluationService>();
+        services.AddScoped<DashboardService>();
+        services.TryAddSingleton(TimeProvider.System);
         return services;
     }
 }

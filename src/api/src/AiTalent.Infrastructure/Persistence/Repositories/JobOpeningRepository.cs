@@ -48,6 +48,13 @@ internal sealed class JobOpeningRepository(AppDbContext db) : IJobOpeningReposit
                 opening => opening.Id == id && opening.CompanyId == companyId && opening.DeletedAt == null,
                 ct);
 
+    public Task<JobOpening?> FindPublicAsync(Guid id, CancellationToken ct = default) =>
+        db.JobOpenings
+            .AsNoTracking()
+            .Include(opening => opening.Profiles)
+            .ThenInclude(profile => profile.Requirements)
+            .FirstOrDefaultAsync(opening => opening.Id == id && opening.DeletedAt == null, ct);
+
     public Task<JobOpening?> FindForApplicationAsync(Guid id, CancellationToken ct = default) =>
         db.JobOpenings
             .AsNoTracking()
