@@ -5,6 +5,7 @@ import pytest
 from ai_engine.services.assessment_parsing import (
     MISSING_JUSTIFICATION,
     as_confidence,
+    as_points,
     as_result,
     as_score,
     parse_assessments,
@@ -91,3 +92,11 @@ def test_one_assessment_per_requirement_in_order_and_missing_ones_flagged():
 def test_non_list_output_yields_no_evidence_for_every_requirement():
     req = uuid.uuid4()
     assert parse_assessments({"oops": True}, [req])[0].result == "NO_EVIDENCE"
+
+
+def test_points_turn_strings_into_objects_and_drop_noise():
+    assert as_points(["Azure", {"description": "AKS"}, "  ", 3]) == [
+        {"description": "Azure"},
+        {"description": "AKS"},
+    ]
+    assert as_points("no es lista") == []

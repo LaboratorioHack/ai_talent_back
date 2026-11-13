@@ -67,6 +67,17 @@ def as_result(value: Any) -> str:
     return _RESULTS.get(key, _RESULTS.get(key.replace("_", " "), "NO_EVIDENCE"))
 
 
+def as_points(value: Any) -> list[dict[str, Any]]:
+    """Strengths and gaps as objects: plain strings become ``{"description": ...}``."""
+    points: list[dict[str, Any]] = []
+    for item in value if isinstance(value, list) else []:
+        if isinstance(item, dict):
+            points.append(item)
+        elif isinstance(item, str) and item.strip():
+            points.append({"description": item.strip()})
+    return points
+
+
 def as_uuid(value: Any) -> uuid.UUID | None:
     try:
         return uuid.UUID(str(value))

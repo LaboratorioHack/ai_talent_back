@@ -27,7 +27,8 @@ _SYSTEM = (
     '"result": "MEETS" | "PARTIALLY_MEETS" | "DOES_NOT_MEET" | "NO_EVIDENCE", '
     '"score": <number 0-100>, "confidence": <number 0-1>, '
     '"justification": "<one sentence in Spanish>", "fragment_ids": ["<resume_fragment_id>"]}], '
-    '"strengths": ["<short Spanish phrase>"], "gaps": ["<short Spanish phrase>"], '
+    '"strengths": [{"description": "<short Spanish phrase>"}], '
+    '"gaps": [{"description": "<short Spanish phrase>"}], '
     '"reasoning_summary": "<two sentences in Spanish>"}\n'
     "Numbers must be JSON numbers, never words like high or low."
 )
