@@ -52,17 +52,19 @@ internal static class CandidateSideEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict);
 
-        app.MapPost("/api/public/portal-link", async (PortalLinkRequest request, HttpRequest http, IConfiguration configuration, IHostEnvironment environment, PortalLinkService service, CancellationToken ct) =>
-                (await service.SendAsync(request.Email, TrustedAppOrigin(http, configuration, environment), ct)).ToHttpResult(_ => Results.NoContent()))
-            .AllowAnonymous()
-            .RequireRateLimiting(RateLimitPolicies.CandidateApply)
-            .WithName("SendPortalLink")
-            .WithSummary("E-mail the applicant portal sign-in link (public)")
-            .WithDescription("Creates a one-time Supabase magic-link token and e-mails it through Criba's SMTP, so it does not depend on Supabase's shared e-mail limit. The link opens `/auth/confirm` on the web app. Always 204 for a valid e-mail; it never reveals whether an account existed.")
-            .Produces(StatusCodes.Status204NoContent)
-            .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesProblem(StatusCodes.Status429TooManyRequests)
-            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+        // Desactivado: el inicio de sesión y el registro los hace Supabase Auth (signInWithOtp), que manda el
+        // correo con el enlace. Criba ya no envía enlaces de entrada por su SMTP.
+        // app.MapPost("/api/public/portal-link", async (PortalLinkRequest request, HttpRequest http, IConfiguration configuration, IHostEnvironment environment, PortalLinkService service, CancellationToken ct) =>
+        //         (await service.SendAsync(request.Email, TrustedAppOrigin(http, configuration, environment), ct)).ToHttpResult(_ => Results.NoContent()))
+        //     .AllowAnonymous()
+        //     .RequireRateLimiting(RateLimitPolicies.CandidateApply)
+        //     .WithName("SendPortalLink")
+        //     .WithSummary("E-mail the applicant portal sign-in link (public)")
+        //     .WithDescription("Creates a one-time Supabase magic-link token and e-mails it through Criba's SMTP, so it does not depend on Supabase's shared e-mail limit. The link opens `/auth/confirm` on the web app. Always 204 for a valid e-mail; it never reveals whether an account existed.")
+        //     .Produces(StatusCodes.Status204NoContent)
+        //     .ProducesProblem(StatusCodes.Status400BadRequest)
+        //     .ProducesProblem(StatusCodes.Status429TooManyRequests)
+        //     .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         var me = app.MapGroup("/api/me");
 
